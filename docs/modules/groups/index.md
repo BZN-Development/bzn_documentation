@@ -1,0 +1,104 @@
+# Groups
+
+Jobs, gangs, businesses and anything else are one thing in bzn: a **group**. One model means
+one set of rules, one admin tool and one API, whether it is the police or a taco stand.
+
+- **[Server](server.md)**: reading, members, duty, managing groups.
+- **[Client](client.md)**: the local player's own groups.
+
+## The model
+
+- A **group** has a name (`police`), a label (`Police`), a **type** (`job`, `gang`,
+  `business`, or your own) and who pays its salary (`paidBy`).
+- A **grade** has a number (0-255), a label, a salary per hour on duty, and
+  **permissions**.
+- A **member** is a character at one grade. A character can be in several groups, limited
+  per type.
+- **Owners**: a grade with the permission `owner` has every permission. A group can have
+  several owners; the last owner cannot be removed or demoted except by an admin (`force`).
+- **Duty**: a character is on duty in at most one group at a time (no double salary).
+
+Groups live in the database. Config creates them only on the first start (`seed`); after
+that they are managed in game, with [commands](../../commands.md#groups) or an admin menu,
+without restarts.
+
+## Config
+
+### Shared
+
+`bzn_config/shared/groups.lua`
+
+```lua
+return {
+    types = {
+        job      = { limit = 2, duty = true,  paidBy = 'city' },
+        gang     = { limit = 1, duty = false, paidBy = 'account' },
+        business = { limit = 1, duty = true,  paidBy = 'account' },
+    },
+}
+```
+
+- **limit**: groups of this type one character may be in.
+- **duty**: whether the type has on/off duty.
+- **paidBy**: who pays salary by default: `'city'` (new money) or `'account'` (the group's
+  account). Each group can override it in game.
+
+### Server
+
+`bzn_config/server/groups.lua`
+
+```lua
+return {
+    -- Created on the first start only, then managed in game.
+    seed = {
+        police = {
+            label = 'Police', type = 'job',
+            grades = {
+                [0] = { label = 'Cadet', salary = 500 },
+                [1] = { label = 'Officer', salary = 750, permissions = { 'account.view' } },
+                [2] = { label = 'Chief', salary = 1200, permissions = { 'owner' } },
+            },
+        },
+    },
+
+    -- Groups a character cannot be in at the same time. A side is a group or 'type:<type>'.
+    conflicts = {
+        { 'police', 'type:gang' },
+    },
+
+    -- Give players ACE principals for their groups.
+    ace = true,
+}
+```
+
+## Permissions
+
+Permissions are free-form strings on a grade. bzn itself uses:
+
+| Permission | Used by |
+| --- | --- |
+| `owner` | every permission; owner protection |
+| `account.view` `account.deposit` `account.withdraw` `account.transfer` `account.manage` | the group's [account](../accounts/) |
+
+Add your own (`armory`, `garage.impound`, `boss.hire`) and check them with
+[`hasPermission`](server.md#haspermission).
+
+## ACE
+
+With `ace = true` every player gets principals for their groups, kept up to date as they
+join, change grade, go on duty or leave:
+
+| Principal | Who has it |
+| --- | --- |
+| `bzn.group.<name>` | every member |
+| `bzn.group.<name>.<grade>` | members at that grade or higher |
+| `bzn.duty.<name>` | members on duty |
+
+```cfg
+add_ace bzn.group.police.2 command.impound allow
+add_ace bzn.duty.police armory.police allow
+```
+
+## Hooks
+
+[Server hooks](../../hooks/server.md#groups) · [Client hooks](../../hooks/client.md#groups)

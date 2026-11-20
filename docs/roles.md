@@ -44,17 +44,86 @@ bzn role remove <server id|user:<id>>
 In game, a staff member can only give or remove roles **below their own** rank, and only
 on users below their own rank. The console can do anything.
 
-## API
+## Server
 
-| Side | Function | |
-| --- | --- | --- |
-| server | `roles.get(src)` | the player's role or nil |
-| server | `roles.has(src, minRole)` | role at or above `minRole` |
-| client | `roles.get()` | the local player's role (for UI) |
-| client | `roles.has(minRole)` | |
+### roles.get
 
-Hooks: `role:changed (userId, role, old, src)` on the server, `role:changed (role)` on the
-client.
+A player's staff role.
+
+```lua
+bzn.roles.get(src)
+```
+
+- src: `integer`
+
+**Returns**
+- role?: `string` e.g. `'admin'`
+
+```lua
+local role = bzn.roles.get(source)   -- 'admin' or nil
+```
+
+### roles.has
+
+Whether a player has a role at or above `minRole`.
+
+```lua
+bzn.roles.has(src, minRole)
+```
+
+- src: `integer`
+- minRole: `string`
+
+**Returns**
+- `boolean`
+
+```lua
+RegisterNetEvent('myadmin:openMenu', function()
+    if not bzn.roles.has(source, 'mod') then return end
+    TriggerClientEvent('myadmin:menu', source)
+end)
+```
+
+## Client
+
+### roles.get
+
+The local player's role, for UI.
+
+```lua
+bzn.roles.get()
+```
+
+**Returns**
+- role?: `string`
+
+```lua
+bzn.hooks.on('role:changed', function(role)
+    SendNUIMessage({ action = 'staff', role = role })
+end)
+```
+
+### roles.has
+
+```lua
+bzn.roles.has(minRole)
+```
+
+- minRole: `string`
+
+**Returns**
+- `boolean`
+
+```lua
+if bzn.roles.has('mod') then
+    showAdminButton()
+end
+```
+
+## Hooks
+
+- Server: `role:changed (userId, role, old, src)`
+- Client: `role:changed (role)`
 
 ## Required permissions
 

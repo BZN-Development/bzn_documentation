@@ -73,6 +73,50 @@ the map after falling through it. bzn prevents both:
   upwards, then from the sky. If it finds ground more than 2 m away it moves the player
   onto it; only if there is none at all does it ask for the default spawn.
 
+## API (server)
+
+### spawn.registerProvider
+
+Adds a spawn provider. Higher priority is asked first; the first that returns a point wins.
+Registering a name again replaces it. Removed when your resource stops.
+
+```lua
+bzn.spawn.registerProvider(name, priority, fn)
+```
+
+- name: `string`
+- priority: `integer` built in: instance 60, last 50, default 0
+- fn: `function(src, character): SpawnPoint?` return nil to let the next provider decide
+
+See [SpawnPoint](types.md#spawnpoint) and the [housing example](#your-own-provider-housing-jail-hospital).
+
+```lua
+bzn.spawn.registerProvider('jail', 90, function(src, character)
+    local cell = getJailCell(character.id)
+    if cell then return { x = cell.x, y = cell.y, z = cell.z, heading = cell.h } end
+end)
+```
+
+### spawn.rememberWorldPosition
+
+Saves a player's open-world position now. Call it right before moving them into an
+instance.
+
+```lua
+bzn.spawn.rememberWorldPosition(src)
+```
+
+- src: `integer`
+
+**Returns**
+- saved: `boolean` false if the player is not in the open world, or spawned less than `saveDelay` seconds ago
+
+```lua
+bzn.spawn.rememberWorldPosition(src)
+SetPlayerRoutingBucket(src, house.bucket)
+SetEntityCoords(GetPlayerPed(src), house.inside)
+```
+
 ## Hooks
 
 - `spawn:beforeSpawn (src, character, point)`: change `point` in place or return `false`.

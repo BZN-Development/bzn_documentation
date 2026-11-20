@@ -4,8 +4,6 @@ Every hook bzn fires on the client. They are about the **local player only** and
 for UIs: update a HUD, open a menu, show a notification. There are no before-hooks on the
 client; decisions are made on the server.
 
-[[toc]]
-
 ## Core
 
 ### `core:ready`

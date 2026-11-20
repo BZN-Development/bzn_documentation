@@ -1,0 +1,91 @@
+# Accounts
+
+Every balance in bzn: personal bank accounts, shared accounts, group accounts, and cash.
+
+- **[Server](server.md)**: reading, moving money, cash, shared accounts, freezing.
+- **[Client](client.md)**: the local player's own accounts.
+
+## Money you can trust
+
+- **The database is the only truth.** Every money operation is one database transaction
+  that changes the balance and writes a statement line together, or does neither.
+- **Never negative.** A withdrawal only succeeds if the money is there at that moment. A
+  hundred withdrawals at the same instant cannot spend the same money twice (tested: 100
+  simultaneous withdrawals of 10 from 750 give exactly 75 successes and a balance of 0).
+- **Whole numbers only.** No `123.43`. Amounts are integers everywhere.
+- **Cached for reading.** Balances are updated from each committed result, so a balance
+  shown anywhere is never ahead of the database. Players get their balances pushed when they
+  change; nothing polls.
+
+## Account types
+
+| Type | Owner | Who can use it |
+| --- | --- | --- |
+| `personal` | a character (one each, created automatically) | only the owner |
+| `shared` | a character, who can add members | the owner, and members with the permissions they were given |
+| `group` | a group (one each, created automatically) | members by their grade's `account.*` permissions; group owners have all |
+
+Every account has a number like `4821-093317`.
+
+## Permissions
+
+| Permission | Allows |
+| --- | --- |
+| `view` | seeing the account and its balance |
+| `deposit` | putting money in (as that character) |
+| `withdraw` | taking money out |
+| `transfer` | sending money to another account |
+| `manage` | all of the above, members and the name |
+
+Money functions check the permission themselves when you pass `charId`: the character doing
+it. Without `charId` the call is trusted (your own script logic, salaries).
+
+For group accounts the permissions are group permissions on the grade (`account.view`,
+`account.withdraw`, ...); see [Groups](../groups/#permissions).
+
+## Cash
+
+Cash is the ox_inventory item `money`: it can be dropped, stolen and found in a search like
+any item. Use the [cash functions](server.md#cash) to give and take it, and
+[`pay`](server.md#pay) for shops.
+
+## Frozen accounts
+
+Staff can freeze an account: no money can leave it, incoming money still arrives. No
+character permission can freeze or unfreeze. Freezes, members and renames are kept in an
+audit log.
+
+## Config
+
+### Server
+
+`bzn_config/server/accounts.lua`
+
+```lua
+return {
+    startingBalance = 0,           -- bank balance of a new character
+    startingCash = 0,              -- cash given once, on first load
+    maxAmount = 1000000000,        -- largest single operation
+    maxSharedPerCharacter = 3,     -- shared accounts one character may own
+    maxMembers = 10,               -- members of one shared account
+    cashItem = 'money',            -- the ox_inventory item that is cash
+}
+```
+
+### Shared
+
+```lua
+return {
+    currency = '$',   -- for UIs
+}
+```
+
+## Not in core
+
+Loans, cards, fees and invoices belong in separate resources built on this API. A loan is a
+`credit` plus its own table of debt (a balance never goes negative), repayments are `debit`
+calls, and `freeze` handles defaulters.
+
+## Hooks
+
+[Server hooks](../../hooks/server.md#accounts) · [Client hooks](../../hooks/client.md#accounts)

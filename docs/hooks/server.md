@@ -3,8 +3,6 @@
 Every hook bzn fires on the server. **Before** marks a before-hook: return `false, 'reason'`
 to stop the action. `src` is the server id, or `nil` when the character is offline.
 
-[[toc]]
-
 ## Core
 
 ### `core:ready`

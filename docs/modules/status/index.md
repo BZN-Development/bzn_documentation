@@ -2,6 +2,9 @@
 
 Hunger, thirst, stress, and any other value from 0 to 100 that changes over time.
 
+- **[Server](server.md)**: read, set, add, rate modifiers.
+- **[Client](client.md)**: values for a HUD, computed from the local clock.
+
 ## Anchors, not ticks
 
 Nothing is updated on a timer. Each status is stored as an **anchor**: its value at one
@@ -66,40 +69,9 @@ ox_inventory keeps `server` on the server only and tells bzn after it confirmed 
 a client can neither see nor fake the amounts. ox_inventory's own `client.status` is not
 used.
 
-## Server API
-
-| Function | |
-| --- | --- |
-| `status.get(charId, name)` | current value |
-| `status.getAll(charId)` | `{ [name] = value }` |
-| `status.set(charId, name, value, reason?)` | errors `unknown_status`, `not_loaded`, `invalid_value` |
-| `status.add(charId, name, amount, reason?)` | negative takes away |
-| `status.setModifier(charId, name, key, perMinute?)` | add, change or (with nil) remove a named rate modifier |
-| `status.rate(charId, name)` | current rate per minute |
-
-Modifiers are named so scripts never overwrite each other:
-
-```lua
-bzn.status.setModifier(charId, 'thirst', 'running', -1.0)   -- thirsty faster while running
-bzn.status.setModifier(charId, 'thirst', 'running', nil)    -- back to normal
-```
-
-Hooks: `status:changed (charId, name, value, reason)` on set/add, `status:empty (charId, name)`
-when it reaches 0, `status:recovered (charId, name)` when it leaves 0.
-
-## Client API
-
-```lua
-bzn.status.get('hunger')    -- computed from the local clock
-bzn.status.getAll()
-bzn.status.rate('thirst')   -- for a trend arrow on a HUD
-```
-
-Hook `status:changed (name, value, rate)` when a new anchor arrives.
-
 ## Saving
 
-Values are saved with the [save system](../database.md#the-save-system): batched, spread
+Values are saved with the [save system](../../database.md#the-save-system): batched, spread
 over time, and always on logout. A crash loses at most one save interval.
 
 ## Commands
@@ -109,3 +81,7 @@ bzn status <id>                     every status with its rate
 bzn status <id> <name> <value>      set one
 bzn status <id> all 100             feed and water
 ```
+
+## Hooks
+
+[Server hooks](../../hooks/server.md#status) · [Client hooks](../../hooks/client.md#status)

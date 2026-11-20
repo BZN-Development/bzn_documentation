@@ -1,6 +1,8 @@
 # Payroll
 
-Salary for time on duty. Depends on [groups](groups.md) and [accounts](accounts.md).
+Salary for time on duty. Depends on [groups](../groups/) and [accounts](../accounts/).
+
+- **[Server](server.md)**: what is owed, collecting, what a group owes.
 
 ## How it works
 
@@ -46,19 +48,6 @@ Server (`bzn_config/server/payroll.lua`):
 | `interval` | `10` | minutes between automatic payouts |
 | `salaryPeriod` | `60` | a grade's salary is for this many minutes on duty |
 
-## API (server)
-
-| Function | Returns |
-| --- | --- |
-| `payroll.owed(charId)` | `{ [group] = amount }` the character is owed |
-| `payroll.owedBy(group)` | `total, { [charId] = amount }` what a group owes |
-| `payroll.collect(charId)` | `paid, failed` where `failed = { [group] = reason }` |
-
-Hook: `payroll:paid (charId, group, amount, paidBy)`.
-
-Statement lines have `type = 'salary'` and `reason = 'Salary: <group label>'`. A deleted
-group's owed salary is kept and never paid by the city instead.
-
 ## Commands
 
 ```
@@ -69,3 +58,7 @@ bzn payroll payout              pay everything earned now
 bzn payroll collect <id>        collect for an online player
 bzn payroll tick <minutes>      fast-forward duty time (bzn:debug 1 only)
 ```
+
+## Hooks
+
+[Server hooks](../../hooks/server.md#payroll)

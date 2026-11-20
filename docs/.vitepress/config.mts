@@ -1,5 +1,11 @@
 import { defineConfig } from 'vitepress'
 
+const section = (text: string, base: string, pages: [string, string][], collapsed = true) => ({
+  text,
+  collapsed,
+  items: pages.map(([label, path]) => ({ text: label, link: `${base}${path}` })),
+})
+
 export default defineConfig({
   title: 'bzn',
   description: 'A modular, performance-first FiveM framework',
@@ -16,40 +22,42 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/getting-started' },
-      { text: 'Modules', link: '/modules/groups' },
-      { text: 'Hooks', link: '/hooks/' },
+      { text: 'Core', link: '/characters/' },
+      { text: 'Modules', link: '/modules/groups/' },
+      {
+        text: 'Reference',
+        items: [
+          { text: 'Hooks', link: '/hooks/' },
+          { text: 'Types', link: '/types' },
+          { text: 'Commands', link: '/commands' },
+        ],
+      },
     ],
 
     sidebar: [
       {
-        text: 'Setting up',
+        text: 'Guide',
         items: [
           { text: 'Getting started', link: '/getting-started' },
           { text: 'Configuration', link: '/config' },
           { text: 'Inventory (ox_inventory)', link: '/inventory' },
           { text: 'Commands', link: '/commands' },
+          { text: 'Troubleshooting', link: '/troubleshooting' },
         ],
       },
-      {
-        text: 'Using bzn from your resource',
-        items: [
-          { text: 'Overview', link: '/using-bzn/' },
-          { text: 'Server side', link: '/using-bzn/server' },
-          { text: 'Client side', link: '/using-bzn/client' },
-        ],
-      },
-      {
-        text: 'Hooks',
-        items: [
-          { text: 'Overview', link: '/hooks/' },
-          { text: 'Server hooks', link: '/hooks/server' },
-          { text: 'Client hooks', link: '/hooks/client' },
-        ],
-      },
+      section('Using bzn from your resource', '/using-bzn/', [
+        ['Overview', ''],
+        ['Server side', 'server'],
+        ['Client side', 'client'],
+      ], false),
       {
         text: 'Core',
         items: [
-          { text: 'Players and characters', link: '/characters' },
+          section('Players and characters', '/characters/', [
+            ['Overview', ''],
+            ['Server', 'server'],
+            ['Client', 'client'],
+          ]),
           { text: 'Spawning and positions', link: '/spawn' },
           { text: 'Staff roles', link: '/roles' },
           { text: 'Saving and the database', link: '/database' },
@@ -58,11 +66,18 @@ export default defineConfig({
       {
         text: 'Modules',
         items: [
-          { text: 'Groups', link: '/modules/groups' },
-          { text: 'Accounts', link: '/modules/accounts' },
-          { text: 'Payroll', link: '/modules/payroll' },
-          { text: 'Status', link: '/modules/status' },
+          section('Groups', '/modules/groups/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
+          section('Accounts', '/modules/accounts/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
+          section('Payroll', '/modules/payroll/', [['Overview', ''], ['Server', 'server']]),
+          section('Status', '/modules/status/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
           { text: 'Writing a module', link: '/modules/writing-modules' },
+        ],
+      },
+      {
+        text: 'Reference',
+        items: [
+          section('Hooks', '/hooks/', [['Overview', ''], ['Server hooks', 'server'], ['Client hooks', 'client']]),
+          { text: 'Types', link: '/types' },
         ],
       },
     ],

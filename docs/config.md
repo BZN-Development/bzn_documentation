@@ -94,8 +94,8 @@ A module whose dependency is off does not start either (`bzn modules` shows why)
 ### Modules
 
 Module options are listed in each module's page:
-[groups](modules/groups.md#config), [accounts](modules/accounts.md#config),
-[payroll](modules/payroll.md#config), [status](modules/status.md#config).
+[groups](modules/groups/index.md#config), [accounts](modules/accounts/index.md#config),
+[payroll](modules/payroll/index.md#config), [status](modules/status/index.md#config).
 
 ## Language
 

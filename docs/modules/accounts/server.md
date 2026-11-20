@@ -1,0 +1,612 @@
+# Server
+
+All amounts are whole numbers, above 0, at most `maxAmount`. Money functions take an
+optional [`TxInfo`](../../types.md#txinfo) as the last argument: what the statement says, who
+did it, and `charId` to act as a character (its permission is then checked).
+
+## Reading
+
+### get
+
+Returns an account.
+
+```lua
+bzn.accounts.get(accountId)
+```
+
+- accountId: `integer`
+
+**Returns**
+- account?: [`Account`](../../types.md#account)
+
+```lua
+local account = bzn.accounts.get(accountId)
+if account and account.frozen then
+    print('frozen:', account.frozenReason)
+end
+```
+
+### getByNumber
+
+```lua
+bzn.accounts.getByNumber(number)
+```
+
+- number: `string` e.g. `'4821-093317'`
+
+**Returns**
+- account?: [`Account`](../../types.md#account)
+
+```lua
+local target = bzn.accounts.getByNumber(input)
+if not target then
+    return false, 'unknown_account'
+end
+```
+
+### getPersonal
+
+A character's personal account. Created if it does not exist.
+
+```lua
+bzn.accounts.getPersonal(charId)
+```
+
+- charId: `integer`
+
+**Returns**
+- account: [`Account`](../../types.md#account)
+
+```lua
+local character = bzn.characters.get(src)
+local personal = bzn.accounts.getPersonal(character.id)
+print(personal.number, personal.balance)
+```
+
+### getGroup
+
+A group's account. Created if it does not exist.
+
+```lua
+bzn.accounts.getGroup(name)
+```
+
+- name: `string`
+
+**Returns**
+- account: [`Account`](../../types.md#account)
+
+```lua
+local police = bzn.accounts.getGroup('police')
+bzn.accounts.credit(police.id, 5000, { type = 'budget', reason = 'Weekly budget' })
+```
+
+### forCharacter
+
+Every account a character can see: personal, shared ones it owns or is a member of, and
+group accounts it has `view` on.
+
+```lua
+bzn.accounts.forCharacter(charId)
+```
+
+- charId: `integer`
+
+**Returns**
+- accounts: [`Account[]`](../../types.md#account)
+
+```lua
+for _, account in ipairs(bzn.accounts.forCharacter(charId)) do
+    print(account.type, account.label, account.balance)
+end
+```
+
+### balance
+
+```lua
+bzn.accounts.balance(accountId)
+```
+
+- accountId: `integer`
+
+**Returns**
+- balance?: `integer`
+
+```lua
+local balance = bzn.accounts.balance(accountId)
+```
+
+### transactions
+
+The newest statement lines, paged.
+
+```lua
+bzn.accounts.transactions(accountId, limit?, beforeId?)
+```
+
+- accountId: `integer`
+- limit?: `integer` default 25, max 100
+- beforeId?: `integer` only lines older than this one (next page)
+
+**Returns**
+- lines: [`Transaction[]`](../../types.md#transaction) newest first
+
+```lua
+local page1 = bzn.accounts.transactions(accountId, 25)
+local page2 = bzn.accounts.transactions(accountId, 25, page1[#page1].id)
+```
+
+### audit
+
+The newest non-money changes: members, freezes, renames, closing.
+
+```lua
+bzn.accounts.audit(accountId, limit?)
+```
+
+- accountId: `integer`
+- limit?: `integer` default 25, max 100
+
+**Returns**
+- entries: `{ id, action, detail, actor, created_at }[]`
+
+```lua
+for _, entry in ipairs(bzn.accounts.audit(accountId, 10)) do
+    print(entry.action, entry.detail, entry.actor)
+end
+```
+
+## Access
+
+### can
+
+Whether a character may do something on an account.
+
+```lua
+bzn.accounts.can(charId, accountId, permission)
+```
+
+- charId: `integer`
+- accountId: `integer`
+- permission: [`AccountPermission`](../../types.md#accountpermission)
+
+**Returns**
+- `boolean`
+
+```lua
+if bzn.accounts.can(charId, accountId, 'withdraw') then
+    -- show the withdraw button
+end
+```
+
+### permissions
+
+Everything a character may do on an account.
+
+```lua
+bzn.accounts.permissions(charId, accountId)
+```
+
+**Returns**
+- permissions: [`AccountPermission[]`](../../types.md#accountpermission)
+
+```lua
+local perms = bzn.accounts.permissions(charId, accountId)   -- { 'view', 'deposit' }
+```
+
+## Moving money
+
+### credit
+
+Puts money into an account. With `info.charId`, that character needs `deposit`.
+
+```lua
+bzn.accounts.credit(accountId, amount, info?)
+```
+
+- accountId: `integer`
+- amount: `integer`
+- info?: [`TxInfo`](../../types.md#txinfo)
+
+**Returns**
+- ok: `boolean`
+- balanceOrErr: `integer` the new balance, or `'invalid_amount'` | `'amount_too_large'` | `'not_found'` | `'no_permission'` | hook reason
+
+```lua
+bzn.accounts.credit(personal.id, 1500, { type = 'reward', reason = 'Delivery done' })
+```
+
+### debit
+
+Takes money from an account, only if it is there and the account is not frozen. With
+`info.charId`, that character needs `withdraw`.
+
+```lua
+bzn.accounts.debit(accountId, amount, info?)
+```
+
+- accountId: `integer`
+- amount: `integer`
+- info?: [`TxInfo`](../../types.md#txinfo)
+
+**Returns**
+- ok: `boolean`
+- balanceOrErr: `integer` | `'invalid_amount'` | `'amount_too_large'` | `'not_found'` | `'no_permission'` | `'frozen'` | `'insufficient_funds'` | hook reason
+
+```lua
+local ok, err = bzn.accounts.debit(accountId, 200, { charId = charId, type = 'purchase', reason = 'Repair kit' })
+if not ok then
+    print('refused:', err)
+end
+```
+
+### transfer
+
+Moves money from one account to another in one transaction. With `info.charId`, that
+character needs `transfer` on the sending account. Anyone may receive.
+
+```lua
+bzn.accounts.transfer(fromId, toId, amount, info?)
+```
+
+- fromId: `integer`
+- toId: `integer`
+- amount: `integer`
+- info?: [`TxInfo`](../../types.md#txinfo)
+
+**Returns**
+- ok: `boolean`
+- fromBalanceOrErr: `integer` the sender's new balance, or `'same_account'` | `'recipient_not_found'` | `'invalid_amount'` | `'no_permission'` | `'frozen'` | `'insufficient_funds'` | hook reason
+
+```lua
+local target = bzn.accounts.getByNumber('4821-093317')
+bzn.accounts.transfer(myAccountId, target.id, 500, { charId = charId, reason = 'Rent' })
+```
+
+### creditMany
+
+Pays many accounts in one transaction: salaries, refunds, event prizes. Either every row is
+paid or none is. With `payerId` the total is taken from that account first. Trusted only (no
+`charId`).
+
+```lua
+bzn.accounts.creditMany(rows, info?, payerId?)
+```
+
+- rows: `{ id: integer, amount: integer }[]`
+- info?: [`TxInfo`](../../types.md#txinfo)
+- payerId?: `integer`
+
+**Returns**
+- ok: `boolean`
+- balancesOrErr: `table<integer, integer>` account id → new balance, or `'invalid_amount'` | `'insufficient_funds'` | `'frozen'` (the payer) | `'recipient_not_found'` | hook reason
+
+```lua
+bzn.accounts.creditMany({
+    { id = 7, amount = 500 },
+    { id = 9, amount = 750 },
+}, { type = 'bonus', reason = 'Christmas bonus' }, companyAccountId)
+```
+
+## Cash
+
+### cash
+
+Cash a player carries (the `money` item).
+
+```lua
+bzn.accounts.cash(src)
+```
+
+- src: `integer`
+
+**Returns**
+- `integer`
+
+```lua
+if bzn.accounts.cash(src) < 100 then
+    return TriggerClientEvent('ox_lib:notify', src, { description = 'You need $100 cash' })
+end
+```
+
+### addCash
+
+Gives a player cash.
+
+```lua
+bzn.accounts.addCash(src, amount, info?)
+```
+
+- src: `integer`
+- amount: `integer`
+- info?: [`TxInfo`](../../types.md#txinfo)
+
+**Returns**
+- ok: `boolean`
+- err?: `'invalid_amount'` | `'no_inventory'` | `'not_loaded'` | `'cannot_carry'`
+
+```lua
+bzn.accounts.addCash(src, 250, { type = 'job', reason = 'Taxi fare' })
+```
+
+### removeCash
+
+Takes cash from a player, only if it has all of it.
+
+```lua
+bzn.accounts.removeCash(src, amount, info?)
+```
+
+- src: `integer`
+- amount: `integer`
+- info?: [`TxInfo`](../../types.md#txinfo)
+
+**Returns**
+- ok: `boolean`
+- err?: `'invalid_amount'` | `'no_inventory'` | `'not_loaded'` | `'insufficient_cash'`
+
+```lua
+local ok = bzn.accounts.removeCash(src, 50, { type = 'fee', reason = 'Car wash' })
+```
+
+### depositCash
+
+Cash into an account, like an ATM. The player's character needs `deposit`. If the account
+refuses the money, the cash is given back.
+
+```lua
+bzn.accounts.depositCash(src, accountId, amount, info?)
+```
+
+- src: `integer`
+- accountId: `integer`
+- amount: `integer`
+- info?: `{ reason?: string }`
+
+**Returns**
+- ok: `boolean`
+- balanceOrErr: `integer` | `'not_loaded'` | `'no_permission'` | `'insufficient_cash'` | any [credit](#credit) error
+
+```lua
+local account = bzn.accounts.getPersonal(bzn.characters.get(src).id)
+local ok, result = bzn.accounts.depositCash(src, account.id, 1000)
+```
+
+### withdrawCash
+
+Account money to cash, like an ATM. The player's character needs `withdraw`. If the cash
+cannot be carried, the money goes back into the account.
+
+```lua
+bzn.accounts.withdrawCash(src, accountId, amount, info?)
+```
+
+- src: `integer`
+- accountId: `integer`
+- amount: `integer`
+- info?: `{ reason?: string }`
+
+**Returns**
+- ok: `boolean`
+- balanceOrErr: `integer` | `'not_loaded'` | `'no_inventory'` | `'cannot_carry'` | any [debit](#debit) error
+
+```lua
+RegisterNetEvent('myatm:withdraw', function(amount)
+    local src = source
+    local character = bzn.characters.get(src)
+    if not character then return end
+    local account = bzn.accounts.getPersonal(character.id)
+    local ok, result = bzn.accounts.withdrawCash(src, account.id, amount)
+    TriggerClientEvent('myatm:result', src, ok, result)
+end)
+```
+
+### pay
+
+Makes a player pay: the usual way for shops and fines. Never splits an amount between cash
+and bank.
+
+```lua
+bzn.accounts.pay(src, amount, info?)
+```
+
+- src: `integer`
+- amount: `integer`
+- info?: `table`
+  - method?: `'auto'` (default: cash if they have enough, else bank) | `'cash'` | `'bank'`
+  - type?: `string` default `'purchase'`
+  - reason?: `string`
+  - to?: `integer` an account that receives the money (a shop's group account); without it the money leaves the economy
+
+**Returns**
+- ok: `boolean`
+- methodOrErr: `'cash'` | `'bank'`, or `'not_loaded'` | `'invalid_amount'` | `'invalid_method'` | `'insufficient_cash'` | `'insufficient_funds'` | `'frozen'` | `'recipient_not_found'`
+
+```lua
+local ok, how = bzn.accounts.pay(src, 120, { reason = '24/7', to = shopAccountId })
+if ok then
+    exports.ox_inventory:AddItem(src, 'sandwich', 1)
+end
+```
+
+## Shared accounts
+
+Functions that take `opts.charId` act as that character, which needs `manage` (closing needs
+the owner). Without it the call is trusted.
+
+### createShared
+
+Creates a shared account owned by a character.
+
+```lua
+bzn.accounts.createShared(ownerCharId, label, opts?)
+```
+
+- ownerCharId: `integer`
+- label: `string` 1-64 characters
+- opts?: `{ actor?: string }`
+
+**Returns**
+- ok: `boolean`
+- accountOrErr: [`Account`](../../types.md#account) | `'not_found'` | `'invalid_label'` | `'limit_reached'`
+
+```lua
+local ok, account = bzn.accounts.createShared(charId, 'Family savings')
+if ok then
+    print('created', account.number)
+end
+```
+
+### setMember
+
+Adds a member, or changes its permissions. Members always have `view`.
+
+```lua
+bzn.accounts.setMember(accountId, charId, permissions, opts?)
+```
+
+- accountId: `integer`
+- charId: `integer` the member
+- permissions: [`AccountPermission[]`](../../types.md#accountpermission)
+- opts?: `{ charId?: integer, actor?: string }` `charId` = who does it
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_shared'` | `'no_permission'` | `'invalid_permission'` | `'unknown_character'` | `'is_owner'` | `'limit_reached'`
+
+```lua
+bzn.accounts.setMember(accountId, friendCharId, { 'deposit', 'withdraw' }, { charId = myCharId })
+```
+
+### removeMember
+
+Removes a member. A member may always remove itself.
+
+```lua
+bzn.accounts.removeMember(accountId, charId, opts?)
+```
+
+- accountId: `integer`
+- charId: `integer`
+- opts?: `{ charId?: integer, actor?: string }`
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_shared'` | `'no_permission'` | `'not_member'`
+
+```lua
+-- a member leaves by itself
+bzn.accounts.removeMember(accountId, myCharId, { charId = myCharId })
+```
+
+### members
+
+```lua
+bzn.accounts.members(accountId)
+```
+
+**Returns**
+- members?: `{ charId: integer, permissions: AccountPermission[] }[]`
+
+```lua
+for _, member in ipairs(bzn.accounts.members(accountId) or {}) do
+    print(member.charId, table.concat(member.permissions, ', '))
+end
+```
+
+### setLabel
+
+Renames an account. With `opts.charId`, only shared accounts and with `manage`.
+
+```lua
+bzn.accounts.setLabel(accountId, label, opts?)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_shared'` | `'no_permission'` | `'invalid_label'`
+
+```lua
+bzn.accounts.setLabel(accountId, 'Holiday fund', { charId = charId })
+```
+
+### close
+
+Closes an empty shared account. With `opts.charId`, only the owner.
+
+```lua
+bzn.accounts.close(accountId, opts?)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_shared'` | `'no_permission'` | `'not_empty'`
+
+```lua
+local ok, err = bzn.accounts.close(accountId, { charId = charId })
+if err == 'not_empty' then
+    -- move the money out first
+end
+```
+
+::: tip
+An account with money in it cannot be closed: money never disappears with an account.
+:::
+
+## Freezing
+
+For staff and scripts. No character permission allows it.
+
+### freeze
+
+No money can leave a frozen account; incoming money still arrives.
+
+```lua
+bzn.accounts.freeze(accountId, reason?, opts?)
+```
+
+- accountId: `integer`
+- reason?: `string`
+- opts?: `{ actor?: string }`
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'already_frozen'`
+
+```lua
+bzn.accounts.freeze(accountId, 'Under investigation', { actor = 'admin:Ben' })
+```
+
+### unfreeze
+
+```lua
+bzn.accounts.unfreeze(accountId, opts?)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_frozen'`
+
+```lua
+bzn.accounts.unfreeze(accountId, { actor = 'admin:Ben' })
+```
+
+## Other
+
+### reload
+
+Reads an account from the database again and updates the cache and players. Only needed
+after someone changed the table by hand.
+
+```lua
+bzn.accounts.reload(accountId)
+```
+
+**Returns**
+- `boolean` false if the account is closed or gone
+
+```lua
+-- after editing bzn_accounts by hand
+bzn.accounts.reload(accountId)
+```
+

@@ -1,5 +1,8 @@
 # Players and characters
 
+- **[Server](server.md)**: characters, players, selection.
+- **[Client](client.md)**: the local player's character.
+
 ## The lifecycle
 
 ```
@@ -48,44 +51,6 @@ end)
 When the selector resource stops, selection becomes automatic again.
 `bzn.characters.releaseSelector()` hands it back without stopping.
 
-## Server API
-
-| Function | Returns | |
-| --- | --- | --- |
-| `characters.get(src)` | `character?` | the loaded character of a player |
-| `characters.getSource(charId)` | `src?` | server id of a loaded character |
-| `characters.list(src)` | `character[]` | the user's characters (for a selector) |
-| `characters.create(src, data)` | `ok, idOrErr` | `data = { firstName, lastName, birthdate = 'YYYY-MM-DD', sex = 'm'\|'f' }`; only while selecting |
-| `characters.delete(src, charId)` | `ok, err` | soft delete; only while selecting |
-| `characters.select(src, charId)` | `ok, err` | load a character |
-| `characters.logout(src)` | `ok, err` | back to selection; errors `not_loaded`, `cooldown` |
-| `characters.useSelector()` | | this resource handles selection |
-| `characters.releaseSelector()` | | hand selection back to core |
-| `players.get(src)` | `player?` | `{ source, userId, license, name, state }` |
-| `players.getByUserId(userId)` | `player?` | the online player of a user |
-
-Create errors: `invalid_first_name`, `invalid_last_name`, `invalid_birthdate`,
-`invalid_sex`, `limit_reached`, `wrong_state`, or a reason from `character:beforeCreate`.
-
-A character:
-
-```lua
-{
-    id = 12, userId = 3,
-    firstName = 'Ada', lastName = 'Larsen', birthdate = '1994-03-02', sex = 'f',
-    createdAt = 1763650000, lastPlayed = 1763660000,  -- unix time
-    position = { x, y, z, heading },                  -- last open-world position
-    instance = { x, y, z, heading, bucket },          -- set if it unloaded inside an instance
-    starterGiven = true,
-}
-```
-
-## Client API
-
-```lua
-local character = bzn.character.get()   -- nil while selecting
-```
-
 ## Logout
 
 `/logout` (config `characters.logoutCommand`) sends the player back to selection. Every
@@ -112,3 +77,7 @@ end)
 ```
 
 Characters that existed before the starter kit was added count as already given.
+
+## Hooks
+
+[Server hooks](../hooks/server.md#characters) · [Client hooks](../hooks/client.md#character)

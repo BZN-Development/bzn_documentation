@@ -32,7 +32,7 @@ ox_inventory loads framework bridges from its own folder:
 ## Cash
 
 Cash is the item `money` (accounts config `cashItem`). Use the
-[accounts](modules/accounts.md#cash) functions (`addCash`, `removeCash`, `pay`), not raw
+[accounts](modules/accounts/index.md#cash) functions (`addCash`, `removeCash`, `pay`), not raw
 `AddItem`, so the `accounts:cash` hook fires and payments follow the same rules everywhere.
 
 ## Food and drink
@@ -48,7 +48,7 @@ Write the effect on the item, in points (0-100), in `data/items.lua`:
 },
 ```
 
-See [Status](modules/status.md#food-and-drink).
+See [Status](modules/status/index.md#food-and-drink).
 
 ## Starter items
 

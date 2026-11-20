@@ -109,17 +109,17 @@ copies. Every hook: [server](../hooks/server.md) and [client](../hooks/client.md
 
 | Namespace | Server | Client | Docs |
 | --- | :---: | :---: | --- |
-| `characters`, `players` | ✓ | | [Players and characters](../characters.md) |
-| `character` | | ✓ | [Players and characters](../characters.md) |
+| `characters`, `players` | ✓ | | [Players and characters](../characters/index.md) |
+| `character` | | ✓ | [Players and characters](../characters/index.md) |
 | `spawn` | ✓ | | [Spawning](../spawn.md) |
 | `roles` | ✓ | ✓ | [Staff roles](../roles.md) |
 | `hooks`, `config` | ✓ | ✓ | [Hooks](../hooks/index.md), [Configuration](../config.md) |
 | `core` | ✓ | ✓ | `core.version()`, `core.isReady()` |
 | `modules` | ✓ | | `modules.list()`: every module and its status |
 | `save`, `db` | ✓ | | [Saving and the database](../database.md) |
-| `groups` | ✓ | ✓ | [Groups](../modules/groups.md) |
-| `accounts` | ✓ | ✓ | [Accounts](../modules/accounts.md) |
-| `payroll` | ✓ | | [Payroll](../modules/payroll.md) |
-| `status` | ✓ | ✓ | [Status](../modules/status.md) |
+| `groups` | ✓ | ✓ | [Groups](../modules/groups/index.md) |
+| `accounts` | ✓ | ✓ | [Accounts](../modules/accounts/index.md) |
+| `payroll` | ✓ | | [Payroll](../modules/payroll/index.md) |
+| `status` | ✓ | ✓ | [Status](../modules/status/index.md) |
 
 Next: **[Server](server.md)** or **[Client](client.md)**.

@@ -78,9 +78,7 @@ Rules for a flush function:
 - A store registered from another resource is removed when that resource stops. Call
   `bzn.save.flushOwn()` in your `onResourceStop` to write what is pending first.
 
-Server API: `save.register(name, flush, opts)`, `save.mark(name, key)`,
-`save.flushKey(name, key)`, `save.flushOwn(reason?)`. `bzn save` in the console flushes
-everything now.
+`bzn save` in the console flushes everything now.
 
 ## Migrations
 
@@ -117,6 +115,103 @@ Rules:
   half-applied if one fails. Keep steps small and use `IF NOT EXISTS`.
 - If a step fails, the owner stays at the last good version, nothing after it runs, and a
   bzn module with a failed migration does not start.
+
+## API (server)
+
+### save.register
+
+Registers a save store. Registering the same name again replaces the function and keeps the
+pending keys.
+
+```lua
+bzn.save.register(name, flush, opts?)
+```
+
+- name: `string`
+- flush: `function(keys: any[])` writes the given keys, in one statement
+- opts?: `table`
+  - characterKeyed?: `boolean` keys are character ids; flushed when a character unloads
+
+```lua
+local notes = {}   -- charId -> text
+
+bzn.save.register('mynotes', function(charIds)
+    local rows = {}
+    for _, charId in ipairs(charIds) do
+        rows[#rows + 1] = { charId, notes[charId] or '' }
+    end
+    MySQL.prepare.await('INSERT INTO mynotes (character_id, text) VALUES (?, ?) ON DUPLICATE KEY UPDATE text = VALUES(text)', rows)
+end, { characterKeyed = true })
+```
+
+### save.mark
+
+Marks a key as changed. It is written in its slice of the next save cycle.
+
+```lua
+bzn.save.mark(name, key)
+```
+
+```lua
+notes[charId] = text
+bzn.save.mark('mynotes', charId)
+```
+
+### save.flushKey
+
+Writes one key now.
+
+```lua
+bzn.save.flushKey(name, key)
+```
+
+**Returns**
+- ok: `boolean`
+
+```lua
+bzn.save.flushKey('mynotes', charId)   -- write this one now
+```
+
+### save.flushOwn
+
+Writes everything pending in your resource's stores now. Call it in your
+`onResourceStop`.
+
+```lua
+bzn.save.flushOwn(reason?)
+```
+
+```lua
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then bzn.save.flushOwn() end
+end)
+```
+
+### db.migrate
+
+Brings your tables up to date with numbered steps. The owner is your resource's name.
+
+```lua
+bzn.db.migrate(steps, owner?)
+```
+
+- steps: `(string | string[] | function)[]`
+- owner?: `string` default: your resource's name
+
+**Returns**
+- ok: `boolean` false if a step failed (your resource should not start)
+
+```lua
+bzn.onReady(function()
+    local ok = bzn.db.migrate({
+        [[CREATE TABLE IF NOT EXISTS `mynotes` (
+            `character_id` INT UNSIGNED NOT NULL,
+            `text` TEXT NOT NULL,
+            PRIMARY KEY (`character_id`)
+        )]],
+    })
+end)
+```
 
 ## Conventions
 
