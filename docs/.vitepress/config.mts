@@ -29,6 +29,8 @@ export default defineConfig({
         text: 'Add-ons',
         items: [
           { text: 'Overview', link: '/addons/' },
+          { text: 'bzn_appearance', link: '/addons/appearance' },
+          { text: 'bzn_multichar', link: '/addons/multichar' },
           { text: 'bzn_vehicledata', link: '/addons/vehicledata' },
         ],
       },

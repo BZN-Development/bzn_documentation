@@ -5,6 +5,8 @@ ones you want, next to bzn_core.
 
 | Add-on | What it does | Repository |
 | --- | --- | --- |
+| [bzn_multichar](multichar.md) | character selection: a lineup scene where the camera moves in on the character you pick | [BZN-Development/bzn_multichar](https://github.com/BZN-Development/bzn_multichar) |
+| [bzn_appearance](appearance.md) | character creator; clothing saved by pack, so new packs never change outfits | [BZN-Development/bzn_appearance](https://github.com/BZN-Development/bzn_appearance) |
 | [bzn_vehicledata](vehicledata.md) | mileage and bodywork dents for owned vehicles | [BZN-Development/bzn_vehicledata](https://github.com/BZN-Development/bzn_vehicledata) |
 
 Start add-ons after bzn_core (and ox_inventory):
@@ -12,5 +14,7 @@ Start add-ons after bzn_core (and ox_inventory):
 ```cfg
 ensure bzn_core
 ensure ox_inventory
+ensure bzn_appearance
+ensure bzn_multichar
 ensure bzn_vehicledata
 ```
