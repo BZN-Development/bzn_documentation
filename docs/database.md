@@ -30,12 +30,45 @@ bzn.save.mark('mydata', charId)
 
 - **Only changed keys** are written, and many changes to one key between saves become one
   write.
-- **Staggered**: every `save.tick` seconds a slice of the keys is flushed, so the load is
-  spread instead of one spike every `save.interval`.
+- **Staggered**: the players are split into slices that are saved one after another,
+  instead of everyone at once (see below).
 - **Character-keyed** stores are flushed for a character when it unloads, before
   `character:unloaded`, so logout always saves.
 - **Shutdown** (txAdmin restart, `stop bzn_core`) unloads every character and flushes
   everything.
+
+### Interval and tick
+
+Two settings control when running data is written:
+
+- **`save.interval`** (300 s): how often **each character** is saved. This is also the most
+  that can be lost on a crash.
+- **`save.tick`** (30 s): how often the save system **wakes up**.
+
+Saving everyone at once every 5 minutes would put a spike on the database: with 200
+players, 200 positions and 600 statuses in the same second. Instead, the players are split
+into `interval / tick` slices (300 / 30 = **10 slices**), and every tick saves one slice:
+
+```
+00:00  slice 0   about 20 players
+00:30  slice 1   about 20 players
+01:00  slice 2   about 20 players
+...
+04:30  slice 9   about 20 players
+05:00  slice 0   again
+```
+
+Every player is still saved once per 5 minutes, but the database gets 20 small writes every
+30 seconds (each slice is one query per store) instead of 200 at once. A character always
+lands in the same slice (by its id), and only characters whose data changed are written.
+
+| If you want | Change |
+| --- | --- |
+| less lost on a crash | lower `interval` (more writes) |
+| an even smoother load | lower `tick` (more, smaller slices) |
+| fewer writes on a big server | raise `interval` |
+
+Logout, disconnect and shutdown always save the character at once, whatever the slice.
 
 Rules for a flush function:
 

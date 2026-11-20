@@ -88,8 +88,8 @@ A module whose dependency is off does not start either (`bzn modules` shows why)
 | | `saveDelay` | `5` | server | seconds after spawning before positions are saved |
 | | `models` | freemode m/f | server | ped model per sex until an appearance resource sets one |
 | `roles` | `list` | mod, admin, senioradmin, dev | server | staff roles, lowest first ([Staff roles](roles.md)) |
-| `save` | `interval` | `300` | server | seconds between saves of the same data (most lost on a crash) |
-| | `tick` | `30` | server | seconds between save ticks (spreads the load) |
+| `save` | `interval` | `300` | server | how often each character's running data (position, status) is saved; also the most that can be lost on a crash |
+| | `tick` | `30` | server | how often the save system wakes up; each time it saves only a slice of the players ([how](database.md#interval-and-tick)) |
 
 ### Modules
 
