@@ -52,26 +52,42 @@ A housing provider overrides all three.
 
 Positions are read on the server (OneSync), never sent by the client.
 
-- While the character is in the open world, its position is checked once per save interval
-  and written only if it moved more than `spawn.saveDistance` metres.
-- On unload (logout, disconnect, shutdown) the exact position is always written.
-- Inside an instance, the open-world position is left alone (it keeps pointing at the
-  door). The instance position is written on unload and available as `character.instance`.
+- **Every 5 seconds** (`spawn.trackInterval`) each character's position is read **into memory**
+  (no database). The reads are staggered: every second a fifth of the players, so the work is
+  spread evenly.
+- **To the database**: once per save interval, only if the character moved more than
+  `spawn.saveDistance` metres; and always on logout, disconnect and shutdown.
+- **In a vehicle**: OneSync does not move a ped while it sits in a vehicle (it stays where the
+  player got in), so the **vehicle's** position is used, and the character is placed 2 m from
+  it on the driver's side (so it does not spawn inside its own car if that comes back there).
+- **Inside an instance**, the open-world position is left alone (it keeps pointing at the door).
+  The instance position is written on unload and available as `character.instance`.
+
+### When a player disconnects or crashes
+
+By the time the server hears a player is gone, its ped is often already deleted, so its
+position can no longer be read. bzn then uses, in this order:
+
+1. the ped handle it last saw (when it still exists);
+2. the **vehicle** the player was last seen in: owned vehicles stay in the world when their
+   driver leaves, so this is where the player quit, to the metre;
+3. the last position read into memory (at most `trackInterval` seconds old).
+
+The console says which one was used (`quit in a vehicle: saving next to it at ...`).
 
 ## Crash safety
 
-A crash on join used to be able to save a position of `0, 0, 0`, or a position far under
-the map after falling through it. bzn prevents both:
-
 - **Nothing is saved before the client confirmed its spawn**, nor in the first
-  `spawn.saveDelay` seconds after it (the server's copy of the ped can lag behind a
-  teleport).
-- **A position is never saved** near the origin, below `spawn.minWorldZ`, or while the ped
-  is falling fast. The last good position is kept instead.
-- **At spawn**, a saved position near the origin is ignored (default spawn). For any other
-  saved position, the client looks for ground at the same x/y, searching downwards, then
-  upwards, then from the sky. If it finds ground more than 2 m away it moves the player
-  onto it; only if there is none at all does it ask for the default spawn.
+  `spawn.saveDelay` seconds after it.
+- **A position is never saved** near the origin, below `spawn.minWorldZ`, or while falling fast.
+  The last good position is kept instead.
+- **At spawn** (saved positions only):
+  - a saved position near the origin is ignored (default spawn);
+  - the client moves the player to the **nearest safe spot** a person can stand on (GTA's
+    navmesh: road, pavement) if one is within 15 m;
+  - then it finds the **ground nearest the saved height**, looking from just above and from a
+    little higher, so a point inside a slope lands on top of it, and a point under the map is
+    moved up. Only with no ground at all does it ask for the default spawn.
 
 ## API (server)
 

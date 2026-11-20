@@ -86,6 +86,7 @@ A module whose dependency is off does not start either (`bzn modules` shows why)
 | | `instanceSpawn` | `'world'` | server | after unloading in an instance: `'world'`, `'position'` or `'instance'` |
 | | `minWorldZ` | `-20.0` | server | below this a position is not saved (fell through the map) |
 | | `saveDelay` | `5` | server | seconds after spawning before positions are saved |
+| | `trackInterval` | `5` | server | seconds between reads of each position into memory (staggered; used when a player drops) |
 | | `models` | freemode m/f | server | ped model per sex until an appearance resource sets one |
 | `roles` | `list` | mod, admin, senioradmin, dev | server | staff roles, lowest first ([Staff roles](roles.md)) |
 | `save` | `interval` | `300` | server | how often each character's running data (position, status) is saved; also the most that can be lost on a crash |

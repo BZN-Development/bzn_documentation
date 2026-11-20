@@ -33,7 +33,8 @@ a real registry; taking it off shows the registered plate again.
   ped that is not a player right after the spawn.
 - **Radio off**: the client that owns the vehicle turns it off when it appears, and again
   the first time a player gets in (config `radioOff`).
-- `warp` puts a player straight into the driver's seat.
+- `warp` puts a player straight into the driver's seat (done by that player's client once the
+  vehicle exists there).
 
 ## Look and condition
 
@@ -61,6 +62,38 @@ A vehicle left out in the world is saved:
 
 Saved: position, health, fuel (the `fuel` state bag fuel scripts set) and whether it is
 locked. Never the look. An empty tank stays empty after a restart.
+
+## Saved state bags
+
+Other resources can keep their own data on a vehicle (mileage, dents, a tuning chip...) without
+touching the database: they put it in an **entity state bag** and register it. bzn_core then
+reads that state bag on the server in the **same writes** as position and fuel, stores it in
+the vehicle's `data` column, and sets it again when the vehicle spawns.
+
+```lua
+-- in your resource (server)
+bzn.onReady(function()
+    bzn.vehicles.registerField('mileage')
+    bzn.vehicles.registerField('deformation', { clearOnRepair = true })
+end)
+```
+
+Or without code, in config:
+
+```lua
+-- bzn_config/server/vehicles.lua
+return {
+    savedStateBags = { deformation = { clearOnRepair = true } },
+}
+```
+
+`clearOnRepair` clears the value when [`repair`](server.md#repair) is called. The saved values
+are in `vehicle.data`. [bzn_vehicledata](../../addons/vehicledata.md) uses this for mileage and
+dents.
+
+`metadata` and `data` are separate on purpose: `metadata` is written at once by
+[`setMetadata`](server.md#setmetadata); `data` is written with the save cycle. Keeping them
+apart means one never overwrites the other.
 
 ## After a restart (`onRestart`)
 
@@ -154,6 +187,7 @@ after success).
 | `keyMode` | `'virtual'` | `'virtual'` or `'item'` |
 | `keyItem` | `'vehicle_key'` | the key item (`keyMode = 'item'`) |
 | `keysOnCreate` | `1` | key items an owner gets with a new vehicle |
+| `savedStateBags` | `{}` | entity state bags saved with the vehicle: `{ name = { clearOnRepair? } }` |
 
 ### Shared
 

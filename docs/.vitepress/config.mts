@@ -24,6 +24,14 @@ export default defineConfig({
       { text: 'Guide', link: '/getting-started' },
       { text: 'Core', link: '/characters/' },
       { text: 'Modules', link: '/modules/groups/' },
+      { text: 'Add-ons', link: '/addons/' },
+      {
+        text: 'Add-ons',
+        items: [
+          { text: 'Overview', link: '/addons/' },
+          { text: 'bzn_vehicledata', link: '/addons/vehicledata' },
+        ],
+      },
       {
         text: 'Reference',
         items: [

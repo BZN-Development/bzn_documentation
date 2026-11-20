@@ -118,6 +118,50 @@ bzn.vehicles.listGroup(name)
 **Returns**
 - vehicles: [`Vehicle[]`](../../types.md#vehicle)
 
+### listSpawned
+
+Owned vehicles in the world now.
+
+```lua
+bzn.vehicles.listSpawned()
+```
+
+**Returns**
+- vehicles: `{ id, entity, netId, owner, group }[]`
+
+```lua
+for _, v in ipairs(bzn.vehicles.listSpawned()) do
+    print(v.id, GetEntityCoords(v.entity))
+end
+```
+
+## Saved state bags
+
+### registerField
+
+Saves an entity state bag with the vehicle (in the same writes as position and fuel) and sets
+it again when the vehicle spawns. See [Saved state bags](index.md#saved-state-bags).
+
+```lua
+bzn.vehicles.registerField(name, opts?)
+```
+
+- name: `string` the state bag key (not `bzn:` or `ox_lib:`)
+- opts?: `table`
+  - clearOnRepair?: `boolean` cleared by [`repair`](#repair)
+
+**Returns**
+- ok: `boolean`
+
+```lua
+bzn.onReady(function()
+    bzn.vehicles.registerField('nitrous')
+end)
+
+-- later, on the server
+Entity(vehicle).state:set('nitrous', 3, true)   -- saved with the vehicle from now on
+```
+
 ## Creating and deleting
 
 ### create

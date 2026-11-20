@@ -143,7 +143,8 @@ Server: `bzn.vehicles.get(id)`.
     stored = 'pillbox',          -- nil = out in the world, 'impound', or a garage
     lastGarage = 'pillbox',
     properties = { ... },        -- ox_lib vehicle properties (look and condition)
-    metadata = { ... },          -- free data for scripts
+    metadata = { ... },          -- free data for scripts (setMetadata)
+    data = { mileage = 12034 },  -- saved state bags (registerField)
     position = nil,              -- last position while out ({ x, y, z, heading })
     entity = nil,                -- while spawned
     netId = nil,
