@@ -11,7 +11,7 @@ hero:
       link: /getting-started
     - theme: alt
       text: Using bzn from your resource
-      link: /using-bzn
+      link: /using-bzn/
     - theme: alt
       text: GitHub
       link: https://github.com/BZN-Development/bzn_core

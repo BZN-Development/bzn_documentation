@@ -17,7 +17,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/getting-started' },
       { text: 'Modules', link: '/modules/groups' },
-      { text: 'Reference', link: '/hooks' },
+      { text: 'Hooks', link: '/hooks/' },
     ],
 
     sidebar: [
@@ -31,10 +31,24 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Using bzn from your resource',
+        items: [
+          { text: 'Overview', link: '/using-bzn/' },
+          { text: 'Server side', link: '/using-bzn/server' },
+          { text: 'Client side', link: '/using-bzn/client' },
+        ],
+      },
+      {
+        text: 'Hooks',
+        items: [
+          { text: 'Overview', link: '/hooks/' },
+          { text: 'Server hooks', link: '/hooks/server' },
+          { text: 'Client hooks', link: '/hooks/client' },
+        ],
+      },
+      {
         text: 'Core',
         items: [
-          { text: 'Using bzn from your resource', link: '/using-bzn' },
-          { text: 'Hooks', link: '/hooks' },
           { text: 'Players and characters', link: '/characters' },
           { text: 'Spawning and positions', link: '/spawn' },
           { text: 'Staff roles', link: '/roles' },

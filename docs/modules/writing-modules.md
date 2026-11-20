@@ -2,7 +2,7 @@
 
 There are two ways to build on bzn:
 
-- **A separate resource** that uses the [`bzn` import](../using-bzn.md). This is the normal
+- **A separate resource** that uses the [`bzn` import](../using-bzn/index.md). This is the normal
   way for anything with a UI or anything you share with others (a bank, a HUD, a job).
 - **A module inside bzn_core**, like groups or accounts. For framework features that other
   code builds on. Modules share core's memory (no export calls between them), get config,
