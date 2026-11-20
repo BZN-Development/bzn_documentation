@@ -20,6 +20,11 @@ bzn_core has started on this client.
 
 The player is in character selection. A selection UI opens here.
 
+### `character:selectionChanged`
+
+The list or the slots changed while in selection (the server sends a new list to a
+selector resource as well).
+
 ### `character:loaded`
 
 `(character)` The local player's character loaded. `bzn.character.get()` returns it from
@@ -37,9 +42,27 @@ end)
 
 ## Spawning
 
+### `spawn:spawning`
+
+`(point)` The character is about to be placed at `point` (before the teleport). Used to move
+a camera there; see `spawn.setTransition` in [Spawning](../spawn.md).
+
+### `spawn:pedReady`
+
+`(ped, point)` The ped has its final model and is in place, but the screen is still dark (or
+a transition camera shows something else). Dress the ped here, so the default clothes are
+never seen. Do not wait inside the handler: the spawn goes on right after it.
+
 ### `spawn:spawned`
 
 `(point)` The player spawned and the screen faded in.
+
+### `spawn:blocked`
+
+`(reason)` A server hook (`spawn:beforeSpawn`) held the spawn back, for example
+`'appearance_required'` while the character creator runs. A resource that took over the
+picture (`spawn.setTransition`) should give it back now. The spawn comes later, with the
+usual `spawn:spawning` and `spawn:spawned`.
 
 ## Staff role
 

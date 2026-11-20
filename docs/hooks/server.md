@@ -49,7 +49,7 @@ unloads after this.
 
 ### `character:beforeCreate` <Badge text="before" />
 
-`(src, data)` A character is about to be created. `data` = `{ firstName, lastName, birthdate, sex }`.
+`(src, data)` A character is about to be created. `data` = `{ firstName, lastName, birthdate, sex, height?, nationality? }`, already validated.
 
 ### `character:created`
 
@@ -57,15 +57,34 @@ unloads after this.
 
 ### `character:beforeDelete` <Badge text="before" />
 
-`(src, character)`
+`(src, character)` `src` is nil when a staff member approves a request while the player is
+offline.
 
 ### `character:deleted`
 
-`(src, character)` Soft-deleted.
+`(src, character)` Soft-deleted (staff can restore it).
+
+### `character:deleteRequested`
+
+`(src, character)` The player asked to delete the character (`deletion = 'request'`).
 
 ### `character:selecting`
 
 `(src)` The player is in character selection. A selector resource shows its UI here.
+
+### `character:selectionChanged`
+
+`(src)` The list or the slots of a player in selection changed (staff froze a character,
+approved a deletion, gave slots). A selector resource refreshes here.
+
+### `character:frozen`
+
+`(charId, reason, by)` A staff member froze a character. If it was being played, the player
+is already back in selection.
+
+### `character:unfrozen`
+
+`(charId, by)`
 
 ### `character:loading` <Badge text="before" />
 
@@ -109,6 +128,10 @@ end)
 
 `(src, character, point)` About to spawn. Changing `point` in place works only from inside
 bzn_core; from another resource, register a [spawn provider](../spawn.md) instead.
+
+Return `false, '<reason>'` to hold the spawn back, e.g. while a character creator runs. The
+character stays loaded but is not placed, and the client gets `spawn:blocked`. Call
+`bzn.spawn.resume(src)` when the spawn may go ahead; the point is resolved again.
 
 ### `spawn:spawned`
 

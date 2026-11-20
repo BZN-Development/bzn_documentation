@@ -133,9 +133,51 @@ SetPlayerRoutingBucket(src, house.bucket)
 SetEntityCoords(GetPlayerPed(src), house.inside)
 ```
 
+### spawn.resume
+
+Spawns a player whose spawn a `spawn:beforeSpawn` hook held back. The point is resolved
+again. Does nothing if the spawn is not held back, so calling it twice is safe.
+
+```lua
+bzn.spawn.resume(src)
+```
+
+- src: `integer`
+
+**Returns**
+- resumed: `boolean`
+
+### spawn.blockedReason
+
+```lua
+local reason = bzn.spawn.blockedReason(src) -- e.g. 'appearance_required', or nil
+```
+
 ## Hooks
 
-- `spawn:beforeSpawn (src, character, point)`: change `point` in place or return `false`.
+- `spawn:beforeSpawn (src, character, point)`: change `point` in place or return `false`
+  (with a reason) to hold the spawn back until `spawn.resume(src)`.
   Runs inside bzn_core, so in-place changes only work for handlers in bzn_core modules; from
   another resource, use a provider.
 - `spawn:spawned (src, character, point)`: the client confirmed the spawn.
+
+Client: `spawn:spawning (point)`, `spawn:pedReady (ped, point)` (dress the ped here, before
+the fade-in), `spawn:spawned (point)` and `spawn:blocked (reason)`.
+
+## Taking over the picture (client)
+
+By default core fades to black, places the character and fades in. A resource that wants
+to show something else while that happens (e.g. a camera flying to the spawn point, as
+[bzn_multichar](addons/multichar.md) does) takes over:
+
+```lua
+bzn.spawn.setTransition(true)   -- core does not fade out or in during spawns
+
+bzn.hooks.on('spawn:spawning', function(point) --[[ start moving a camera to point ]] end)
+bzn.hooks.on('spawn:spawned', function(point)
+    -- bring the camera down, hand back to the game camera, then:
+    bzn.spawn.setTransition(false)
+end)
+```
+
+It is handed back automatically if the resource stops.
