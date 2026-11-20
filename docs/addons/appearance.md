@@ -39,6 +39,39 @@ back before its first spawn: it gets the creator in GTA Online's creator room, a
 own routing bucket. When it saves, it spawns as usual. Turn this off with
 `Config.requireCreator = false`.
 
+## Shops
+
+`Config.shops` places the shops (blip per type, and `[E]` when a player stands at one). A
+shop is the editor with only its own tabs. Everything goes in a **cart** (the bag at the top
+right) and is paid once, in cash or from the bank (bzn_core's `accounts.pay`). With
+`payTo = '<group>'` the money goes to that group's account; otherwise it leaves the economy.
+The server works the bill out itself, so a client cannot change what it pays.
+
+**Clothing shops** (`type = 'clothing'`): what the player wears and does not own is in the
+cart; **+ Cart** keeps a piece in it while they try the next one on (e.g. one top in three
+colours, up to `Config.maxCart`). After paying, everything in the cart is owned. Price of a
+piece, in order:
+
+1. a price set on it with `/clothing_set` (for one colour, or the whole piece),
+2. its slot's price in `Config.prices`, times its pack's multiplier in `Config.prices.collections`.
+
+Owned clothing is free to wear again (`Config.ownedFree`). Hidden clothing
+(`/clothing_set <slot> hidden on`) is skipped in the creator and the shops and cannot be
+newly put on; staff in `/appearance` see everything.
+
+**Barbers** (`type = 'barber'`): hair, beard, eyebrows, makeup and the other overlays. The
+price is per change (`Config.barberPrices`): a new hairstyle, new hair colours, and each
+overlay that changed.
+
+## Photos
+
+The shops and the creator show a photo of each piece of clothing and a photo grid per slot.
+The photos are made by the staff tool **bzn_photos** (start it only when you take photos) and
+saved in `thumbnails/` as WebP. bzn_appearance serves them over the server's own HTTP
+endpoint (`http://<server>/bzn_appearance/thumb/<file>.webp`), so a player only downloads the
+photos they look at, and new photos work without a restart. Clothing without a photo shows
+its number.
+
 ## Commands
 
 | Command | Who | What |
@@ -46,6 +79,8 @@ own routing bucket. When it saves, it spawns as usual. Turn this off with
 | `/reloadskin` | everyone | a fresh ped with the saved look; health and armour are kept (cooldown `Config.reloadCooldown`, not in vehicles, combat, water or while falling) |
 | `/appearance [id]` | `group.admin` | opens the free editor for a player (default: yourself) |
 | `/appearance_scan` | `group.admin` | reads every clothing pack on your client and stores it as the catalog |
+| `/clothing_info` | `group.admin` | pack, drawable, texture, price and shop data of everything you wear (chat and F8) |
+| `/clothing_set <slot> <price\|label\|hidden> <value> [texture]` | `group.admin` | shop data of what you wear in a slot (`11`, or `p0` for props); `clear` removes a price or label; `texture` sets only the colour you wear |
 | `/appearance_remap model kind slot fromC fromD toC toD [textureOffset]` | `group.admin` | clothing moved to another pack; `-` is the base game |
 
 Run `/appearance_scan` after adding or removing clothing packs. Until a model is scanned,
