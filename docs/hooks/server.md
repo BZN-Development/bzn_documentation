@@ -212,6 +212,87 @@ end)
 
 `({ source, charId, amount, entry })` Cash given (`amount` > 0) or taken (< 0).
 
+## Vehicles
+
+### `vehicles:created`
+
+`(id)`
+
+### `vehicles:deleted`
+
+`(id)`
+
+### `vehicles:beforeSpawn` <Badge text="before" />
+
+`(id, coords)`
+
+### `vehicles:spawned`
+
+`(id, entity)`
+
+### `vehicles:beforePark` <Badge text="before" />
+
+`(id, garage)`
+
+### `vehicles:parked`
+
+`(id, garage)`
+
+### `vehicles:despawned`
+
+`(id)` Left the world (parked, impounded, deleted).
+
+### `vehicles:lost`
+
+`(id)` Removed from the world by something else (a cleanup script). It follows `onRestart`.
+
+### `vehicles:ownerChanged`
+
+`(id, charId, group)`
+
+### `vehicles:plateChanged`
+
+`(id, shown, old)` The plate on the vehicle changed (re-registration or a fake plate).
+
+### `vehicles:beforeImpound` <Badge text="before" />
+
+`(id, opts)`
+
+### `vehicles:impounded`
+
+`(id, info)` `info = { reason, fee, actor, minutes, lot }`
+
+### `vehicles:released`
+
+`(id, garage)`
+
+### `vehicles:keyGiven`
+
+`(id, charId, minutes)` `minutes` nil = permanent.
+
+### `vehicles:keyRemoved`
+
+`(id, charId)` `charId` nil = every key.
+
+### `vehicles:locksChanged`
+
+`(id, version)` Old key items no longer work.
+
+### `vehicles:beforeLock` <Badge text="before" />
+
+`(entity, locked, charId)`
+
+```lua
+-- no unlocking a police car during a chase
+bzn.hooks.on('vehicles:beforeLock', function(entity, locked, charId)
+    if not locked and Entity(entity).state.inPursuit then return false, 'in_pursuit' end
+end)
+```
+
+### `vehicles:lockChanged`
+
+`(entity, locked, id, charId)` `id` nil for a temporary vehicle; `charId` nil for a trusted call.
+
 ## Payroll
 
 ### `payroll:paid`

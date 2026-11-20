@@ -121,5 +121,6 @@ copies. Every hook: [server](../hooks/server.md) and [client](../hooks/client.md
 | `accounts` | ✓ | ✓ | [Accounts](../modules/accounts/index.md) |
 | `payroll` | ✓ | | [Payroll](../modules/payroll/index.md) |
 | `status` | ✓ | ✓ | [Status](../modules/status/index.md) |
+| `vehicles` | ✓ | | [Vehicles](../modules/vehicles/index.md) |
 
 Next: **[Server](server.md)** or **[Client](client.md)**.

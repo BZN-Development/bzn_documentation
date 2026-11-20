@@ -124,6 +124,32 @@ A statement line. Server: `bzn.accounts.transactions(id)`.
 }
 ```
 
+## Vehicle
+
+Server: `bzn.vehicles.get(id)`.
+
+```lua
+{
+    id = 7,
+    vin = '7KASU0KTJ337EBTL2',
+    vinScratched = false,
+    plate = '02UNI841',          -- registered
+    fakePlate = nil,             -- shown instead while set
+    shownPlate = '02UNI841',
+    model = 'sultan',
+    type = 'automobile',         -- automobile | bike | boat | heli | plane | submarine | trailer | train
+    owner = 12,                  -- character id, or nil for a group vehicle
+    group = nil,
+    stored = 'pillbox',          -- nil = out in the world, 'impound', or a garage
+    lastGarage = 'pillbox',
+    properties = { ... },        -- ox_lib vehicle properties (look and condition)
+    metadata = { ... },          -- free data for scripts
+    position = nil,              -- last position while out ({ x, y, z, heading })
+    entity = nil,                -- while spawned
+    netId = nil,
+}
+```
+
 ## SpawnPoint
 
 Returned by a [spawn provider](spawn.md).

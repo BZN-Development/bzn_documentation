@@ -117,6 +117,22 @@ ox_inventory must start **after** bzn_core, and the bridge must be installed wit
 The item needs `server = { status = { hunger = 20 } }` in ox_inventory's `items.lua`.
 ox_inventory's own `client.status` is not used. See [Status](modules/status/#food-and-drink).
 
+### A vehicle drops or sinks when it spawns
+
+bzn spawns vehicles at the ground height a nearby client reports. With no player within
+300 m, the given height is used: give garage spawn points at ground level.
+
+### "refused opening trunk...: plate ... was shown by 2 vehicle(s)"
+
+Another script gave a vehicle a plate an owned vehicle has. bzn gave that vehicle a new plate
+and refused the one open; opening again shows the right trunk. Nothing leaked.
+
+### A player cannot lock their own car
+
+- `keyMode = 'item'`: the owner needs a key item too (`bzn vehicles keyitem <vehicle> <id>`).
+- After `changelocks`, old keys no longer work.
+- A group vehicle needs the grade permission `vehicle.use`.
+
 ## Getting help
 
 When you ask for help, include:

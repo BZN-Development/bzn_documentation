@@ -90,7 +90,7 @@ See [Staff roles](roles.md).
 The server console should show something like:
 
 ```
-[bzn:modules] started 4 module(s): groups, accounts, payroll, status
+[bzn:modules] started 5 module(s): groups, accounts, payroll, status, vehicles
 [bzn:core] bzn_core 0.1.0 ready
 ```
 

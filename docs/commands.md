@@ -76,6 +76,30 @@ bzn accounts reload <account>                  read again from the database afte
 
 The admin is recorded as the actor on every statement line.
 
+## Vehicles
+
+A vehicle is its id, `vin:<VIN>` or `plate:<PLATE>` (registered plate).
+
+```
+bzn vehicles list <target>
+bzn vehicles info <vehicle>
+bzn vehicles give <target> <model> [garage]
+bzn vehicles spawn <vehicle> <server id>            next to that player
+bzn vehicles park <vehicle> <garage>
+bzn vehicles plate <vehicle> <plate>                re-register
+bzn vehicles fakeplate <vehicle> <plate|off>
+bzn vehicles repair <vehicle>
+bzn vehicles impound <vehicle> <fee> [reason...]
+bzn vehicles release <vehicle> [garage]             free, also before the release time
+bzn vehicles keys <vehicle>
+bzn vehicles givekey <vehicle> <target> [minutes]
+bzn vehicles removekey <vehicle> [target]           no target = every key
+bzn vehicles keyitem <vehicle> <server id>          a key item
+bzn vehicles changelocks <vehicle>                  old keys stop working
+bzn vehicles lock <vehicle>                         toggle (vehicle must be out)
+bzn vehicles delete <vehicle>
+```
+
 ## Payroll
 
 ```

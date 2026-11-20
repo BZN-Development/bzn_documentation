@@ -29,6 +29,30 @@ ox_inventory loads framework bridges from its own folder:
 - **Restarts**: restarting ox_inventory while characters are loaded gives them their
   inventories again.
 
+## Trunks and gloveboxes
+
+Trunk and glovebox contents are saved on the vehicle's own row (`bzn_vehicles.id`); vehicles
+nobody owns keep theirs only while they exist. bzn makes sure a trunk can never open on the
+wrong vehicle, even with traffic or other scripts using the same plate: see
+[Trunks never leak](modules/vehicles/index.md#trunks-never-leak).
+
+ox_inventory gives vehicles nobody owns random loot (traffic, and also bzn's temporary
+vehicles such as rentals). Turn it off with `setr inventory:randomloot false` if you do not
+want that.
+
+## Vehicle keys
+
+With vehicles `keyMode = 'item'`, add the key item to `data/items.lua`:
+
+```lua
+['vehicle_key'] = {
+    label = 'Vehicle key',
+    weight = 10,
+    stack = false,
+    close = true,
+},
+```
+
 ## Cash
 
 Cash is the item `money` (accounts config `cashItem`). Use the

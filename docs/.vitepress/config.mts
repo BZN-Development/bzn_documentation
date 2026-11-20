@@ -70,6 +70,7 @@ export default defineConfig({
           section('Accounts', '/modules/accounts/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
           section('Payroll', '/modules/payroll/', [['Overview', ''], ['Server', 'server']]),
           section('Status', '/modules/status/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
+          section('Vehicles', '/modules/vehicles/', [['Overview', ''], ['Server', 'server'], ['Client', 'client']]),
           { text: 'Writing a module', link: '/modules/writing-modules' },
         ],
       },
