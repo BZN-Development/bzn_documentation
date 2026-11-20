@@ -12,7 +12,8 @@ written to the server log with who ran it.
 | --- | --- |
 | `12` | the online player with server id 12 |
 | `char:34` | character 34, online or offline |
-| `user:5` | user 5 (roles only) |
+| `user:5` | user 5 (roles, slots, characters) |
+| `license:abc…`, `fivem:123`, `discord:…` | the user who has connected with that identifier (slots, characters) |
 | `group:police` | the police group's account (accounts only) |
 | `acc:7` | account 7 (accounts only) |
 | `4821-093317` | an account number (accounts only) |
@@ -26,6 +27,38 @@ bzn config <section>             the merged config of a section
 ```
 
 `/logout` (for players) goes back to character selection.
+
+## Characters and slots
+
+```
+bzn slots info <target>
+bzn slots add <target> <amount> [note]
+bzn slots remove <target> <amount> [note]
+
+bzn char list <target>             every character of a user, deleted ones included
+bzn char info <charId>
+bzn char freeze <charId> <reason>  the reason is shown to the player
+bzn char unfreeze <charId>
+bzn char deletions                 characters waiting for a deletion to be approved
+bzn char approve <charId>
+bzn char deny <charId> [reason]
+bzn char restore <charId>          bring a deleted character back
+```
+
+A user has `slots.base` slots plus what `bzn slots add` gives, never more than `slots.max`.
+Removing slots never touches characters: a user with more characters than slots just
+cannot create new ones.
+
+Because the console can target offline users by identifier, a web store can give slots
+after a purchase. With Tebex, a command like this (check the variable names your store
+offers):
+
+```
+bzn slots add fivem:{id} 1 tebex {transaction}
+```
+
+`/multichar_here` (admins, from [bzn_multichar](addons/multichar.md)) shows the selection
+scene where you stand.
 
 ## Roles
 

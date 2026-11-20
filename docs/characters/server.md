@@ -59,9 +59,25 @@ for _, character in ipairs(bzn.characters.list(src) or {}) do
 end
 ```
 
+### selection
+
+Everything a selector UI shows: the characters with previews, the slots and the deletion
+mode.
+
+```lua
+bzn.characters.selection(src)
+```
+
+- src: `integer`
+
+**Returns**
+- selection?: [`Selection`](../types.md#selection)
+
 ### create
 
-Creates a character for a player's user. Only while the player is in selection.
+Creates a character for a player's user. Only while the player is in selection. Core
+validates everything (see [Identity and CPR](index.md#identity-and-cpr)) and gives the
+character its CPR number.
 
 ```lua
 bzn.characters.create(src, data)
@@ -73,20 +89,23 @@ bzn.characters.create(src, data)
   - lastName: `string`
   - birthdate: `string` `'YYYY-MM-DD'`
   - sex: `'m'` | `'f'`
+  - height?: `integer` centimetres
+  - nationality?: `string` one of the configured list
 
 **Returns**
 - ok: `boolean`
-- idOrErr: `integer` the new character id, or `'not_found'` | `'wrong_state'` | `'invalid_first_name'` | `'invalid_last_name'` | `'invalid_birthdate'` | `'invalid_sex'` | `'limit_reached'` | hook reason
+- idOrErr: `integer` the new character id, or `'not_found'` | `'wrong_state'` | `'limit_reached'` | `'name_taken'` | `'name_blacklisted'` | `'cpr_exhausted'` | `'invalid_first_name'` | `'invalid_last_name'` | `'invalid_birthdate'` | `'invalid_sex'` | `'invalid_height'` | `'invalid_nationality'` | `'failed'` | hook reason
 
 ```lua
 local ok, id = bzn.characters.create(src, {
-    firstName = 'Ada', lastName = 'Larsen', birthdate = '1994-03-02', sex = 'f',
+    firstName = 'Ada', lastName = 'Larsen', birthdate = '1994-03-02', sex = 'f', height = 172,
 })
 ```
 
 ### delete
 
-Soft-deletes one of a player's characters. Only while the player is in selection.
+Deletes, or asks to delete, one of a player's characters (config `characters.deletion`).
+Only while the player is in selection.
 
 ```lua
 bzn.characters.delete(src, charId)
@@ -97,11 +116,19 @@ bzn.characters.delete(src, charId)
 
 **Returns**
 - ok: `boolean`
-- err?: `string`
+- result: `'requested'` | `'deleted'` when ok, otherwise `'disabled'` | `'not_found'` | `'wrong_state'` | `'already_requested'` | hook reason
+
+### cancelDelete
+
+Takes back a deletion request. Only while the player is in selection.
 
 ```lua
-local ok, err = bzn.characters.delete(src, charId)
+bzn.characters.cancelDelete(src, charId)
 ```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'wrong_state'` | `'not_requested'`
 
 ### select
 
@@ -116,7 +143,7 @@ bzn.characters.select(src, charId)
 
 **Returns**
 - ok: `boolean`
-- err?: `string`
+- err?: `'not_found'` | `'wrong_state'` | `'already_loaded'` | `'frozen'` | `'delete_requested'` | hook reason
 
 ```lua
 RegisterNetEvent('myselector:play', function(charId)
@@ -146,6 +173,62 @@ RegisterCommand('switch', function(src)
     end
 end)
 ```
+
+### registerPreview
+
+Adds a field to `preview` on every character in [`selection`](#selection). `fn` gets every
+character id of the list at once and returns `charId -> value`.
+
+```lua
+bzn.characters.registerPreview(key, fn)
+```
+
+- key: `string`
+- fn: `fun(charIds: integer[]): table<integer, any>`
+
+## Staff
+
+These work online or offline. `by` is who did it, for the record.
+
+| Function | Returns | |
+| --- | --- | --- |
+| `bzn.characters.find(charId)` | `Character?, deletedAt?` | any character, deleted ones included |
+| `bzn.characters.listForUser(userId)` | `{ character, deletedAt }[]` | every character of a user |
+| `bzn.characters.freeze(charId, reason, by)` | `ok, err?` | `'not_found'` \| `'invalid_reason'` |
+| `bzn.characters.unfreeze(charId, by)` | `ok, err?` | `'not_frozen'` |
+| `bzn.characters.deletionRequests()` | `{ character, userName }[]` | oldest first |
+| `bzn.characters.approveDelete(charId, by)` | `ok, err?` | `'not_requested'` \| `'loaded'` \| hook reason |
+| `bzn.characters.denyDelete(charId, by, reason?)` | `ok, err?` | `'not_requested'` |
+| `bzn.characters.restore(charId, by)` | `ok, err?` | `'not_deleted'` |
+
+## Slots
+
+| Function | Returns | |
+| --- | --- | --- |
+| `bzn.slots.get(userId)` | [`Slots`](../types.md#slots) | |
+| `bzn.slots.add(userId, amount, opts?)` | `ok, Slots \| err` | `'invalid_amount'` \| `'over_max'` \| `'not_found'` |
+| `bzn.slots.remove(userId, amount, opts?)` | `ok, Slots \| err` | never below the base; `'no_extra_slots'` |
+| `bzn.slots.history(userId)` | `{ amount, source, note, granted_by, granted_at }[]` | newest first |
+
+`opts` = `{ source?, note?, by? }`.
+
+```lua
+-- e.g. a store webhook
+local ok, slots = bzn.slots.add(userId, 1, { source = 'tebex', note = 'order 1234', by = 'store' })
+```
+
+## Identity
+
+### identity.validateCpr
+
+```lua
+bzn.identity.validateCpr(cpr)
+```
+
+**Returns**
+- ok: `boolean`
+- sex?: `'m'` | `'f'`
+- birthdate?: `string` `'YYYY-MM-DD'`
 
 ## Selection
 

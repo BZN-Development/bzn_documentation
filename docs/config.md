@@ -74,13 +74,21 @@ A module whose dependency is off does not start either (`bzn modules` shows why)
 | `players` | `requiredIdentifiers` | `{ 'license' }` | server | identifiers a player must have to join, e.g. `{ 'license', 'discord' }` |
 | | `duplicateLicense` | `false` | server | allow the same license twice at once |
 | | `joinTimeout` | `300` | server | seconds a connection may take to finish joining |
-| `characters` | `nameMin`, `nameMax` | `2`, `24` | shared | name length |
-| | `minAge`, `maxAge` | `18`, `90` | shared | age range from the birthdate |
-| | `maxPerUser` | `3` | server | characters per user |
+| `characters` | `slots.base` | `3` | server | character slots every user has |
+| | `slots.max` | `8` | server | hard limit, extra slots included; nobody goes over it |
+| | `deletion` | `'request'` | server | `'request'` (staff approve), `'direct'` or `false` (players cannot delete) |
 | | `devCharacter` | `true` | server | without a selector resource, create a placeholder character |
 | | `logoutCommand` | `'logout'` | server | command to go back to selection, `false` to disable |
 | | `logoutCooldown` | `10` | server | seconds between logouts |
+| | `selectorGrace` | `10` | server | seconds to wait for a stopped selector to come back before choosing automatically |
 | | `starterItems` | `{}` | server | items a new character gets once: `{ { 'phone', 1 }, ... }` |
+| `identity` | `nameMin`, `nameMax` | `2`, `24` | shared | length of the first and the last name |
+| | `minAge`, `maxAge` | `18`, `90` | shared | age range from the birthdate |
+| | `height` | `{ mode = 'optional', min = 140, max = 210 }` | shared | `mode`: `'required'`, `'optional'` or `false`; centimetres |
+| | `nationality` | `{ mode = 'optional', list = { ... } }` | shared | `mode` as for height; `list` = the choices |
+| | `capitalize` | `true` | server | `ada larsen-møller` is saved as `Ada Larsen-Møller` |
+| | `nameBlacklist` | `{}` | server | names that cannot be used: `'admin'` (first or last name) or `'john wick'` (full name) |
+| | `uniqueNames` | `false` | server | no two active characters with the same full name |
 | `spawn` | `defaults` | airport | server | default spawn points (the first is used) |
 | | `saveDistance` | `10.0` | server | metres moved before the position is written again |
 | | `instanceSpawn` | `'world'` | server | after unloading in an instance: `'world'`, `'position'` or `'instance'` |
