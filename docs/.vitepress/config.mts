@@ -51,6 +51,7 @@ export default defineConfig({
           { text: 'Getting started', link: '/getting-started' },
           { text: 'Configuration', link: '/config' },
           { text: 'Inventory (ox_inventory)', link: '/inventory' },
+          { text: 'Bridges (lb-phone, lb-tablet)', link: '/bridges' },
           { text: 'Commands', link: '/commands' },
           { text: 'Troubleshooting', link: '/troubleshooting' },
         ],

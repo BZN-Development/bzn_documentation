@@ -1,0 +1,41 @@
+# Bridges
+
+Some resources can only load a framework bridge from their own folder. bzn_core ships
+those bridges in `bzn_core/bridges/<resource>/`; you install one by copying it into the
+resource and telling the resource to use `bzn`.
+
+| Resource | Copy | Then |
+| --- | --- | --- |
+| ox_inventory | `bridges/ox_inventory/` to `ox_inventory/modules/bridge/bzn/` | `setr inventory:framework "bzn"`, see [Inventory](inventory.md) |
+| lb-phone | the contents of `bridges/lb-phone/` into `lb-phone/` | `Config.Framework = "bzn"` and `Config.ServerSideSpawn = false` in its `config/config.lua` |
+| lb-tablet | the contents of `bridges/lb-tablet/` into `lb-tablet/` | `Config.Framework = "bzn"` in its `config/config.lua`; do not import `Optional SQL/registration.sql` |
+
+Copy the bridge again after every update of the resource: updates replace these folders.
+On start, bzn_core checks every installed resource that has a bridge and warns when the
+resource is not set to `bzn`, or when a bridge file is missing or differs from the one in
+bzn_core:
+
+```
+[bridges] lb-phone bridge: server/custom/frameworks/bzn/bzn.lua is outdated.
+Copy bzn_core/bridges/lb-phone/ to lb-phone/ and restart lb-phone.
+```
+
+Bridges only use bzn's public API (exports and the `bzn:<hook>` events), so they keep
+working when bzn_core restarts, and they never write to bzn's tables.
+
+## lb-phone and lb-tablet
+
+| | bzn |
+| --- | --- |
+| identifier | character id |
+| bank | the character's personal account |
+| job | the group the character is on duty in, else its first `job` or `business` group |
+| company open | someone is on duty in it |
+| boss | grade permission `phone.manage` / `tablet.manage` (owners have it); a boss only manages members and grades below their own |
+| company money | the group's account; bzn checks deposit and withdraw permissions |
+| phone Garage and valet | owned vehicles; valet spawns the vehicle through bzn (only a stored one, after paying) |
+| MDT people and vehicles | characters, their groups, and vehicles by registered plate |
+| MDT fines | one transfer from the character's personal account to the department's account |
+| MDT licenses | the bridge's own table, until bzn has licenses |
+
+Each bridge's README lists its settings (top of its server `bzn.lua`).
