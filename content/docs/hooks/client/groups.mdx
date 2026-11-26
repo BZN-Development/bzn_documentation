@@ -1,0 +1,25 @@
+---
+title: "Groups"
+description: "The local player's groups and duty."
+---
+
+## `groups:changed` [#groups-changed]
+
+`(memberships, duty)` The local player's groups changed: `{ police = 2 }`, and the duty
+group or `nil`.
+
+```lua
+bzn.hooks.on('groups:changed', function(memberships, duty)
+    SendNUIMessage({ action = 'job', police = memberships.police, duty = duty })
+end)
+```
+
+## `groups:dutyChanged` [#groups-dutychanged]
+
+`(duty, previous)` On duty in `duty`, or off duty when `duty` is `nil`.
+
+```lua
+bzn.hooks.on('groups:dutyChanged', function(duty)
+    SendNUIMessage({ action = 'duty', group = duty })
+end)
+```

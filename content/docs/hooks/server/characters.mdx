@@ -1,0 +1,175 @@
+---
+title: "Characters"
+description: "Creating, deleting, selecting, freezing, loading and unloading a character, and its metadata."
+---
+
+## `character:beforeCreate` <Badge>before</Badge> [#character-beforecreate]
+
+`(src, data)` A character is about to be created. `data` = `{ firstName, lastName, birthdate, sex, height?, nationality? }`, already validated.
+
+```lua
+-- only whitelisted users may make a character named like staff
+bzn.hooks.on('character:beforeCreate', function(src, data)
+    if data.lastName:lower() == 'admin' then
+        return false, 'name_not_allowed'
+    end
+end)
+```
+
+## `character:created` [#character-created]
+
+`(src, character)` A character was created. It is not loaded yet: that comes when the player selects it.
+
+```lua
+bzn.hooks.on('character:created', function(src, character)
+    sendToDiscord(('New character: %s %s'):format(character.firstName, character.lastName))
+end)
+```
+
+## `character:beforeDelete` <Badge>before</Badge> [#character-beforedelete]
+
+`(src, character)` `src` is nil when a staff member approves a request while the player is
+offline.
+
+A character is about to be deleted.
+
+```lua
+-- no deleting a character that owns a company
+bzn.hooks.on('character:beforeDelete', function(src, character)
+    if ownsCompany(character.id) then return false, 'owns_company' end
+end)
+```
+
+## `character:deleted` [#character-deleted]
+
+`(src, character)` Soft-deleted (staff can restore it).
+
+```lua
+-- hand the character's house back to the market
+bzn.hooks.on('character:deleted', function(src, character)
+    releaseHouses(character.id)
+end)
+```
+
+## `character:deleteRequested` [#character-deleterequested]
+
+`(src, character)` The player asked to delete the character (`deletion = 'request'`).
+
+```lua
+-- tell staff that a request is waiting
+bzn.hooks.on('character:deleteRequested', function(src, character)
+    sendToDiscord(('Deletion requested: %s %s (bzn char approve %d)')
+        :format(character.firstName, character.lastName, character.id))
+end)
+```
+
+## `character:selecting` [#character-selecting]
+
+`(src)` The player is in character selection. A selector resource shows its UI here.
+
+```lua
+-- a selector resource (after bzn.characters.useSelector())
+bzn.hooks.on('character:selecting', function(src)
+    TriggerClientEvent('myselector:open', src, bzn.characters.selection(src))
+end)
+```
+
+## `character:selectionChanged` [#character-selectionchanged]
+
+`(src)` The list or the slots of a player in selection changed (staff froze a character,
+approved a deletion, gave slots). A selector resource refreshes here.
+
+```lua
+bzn.hooks.on('character:selectionChanged', function(src)
+    TriggerClientEvent('myselector:refresh', src, bzn.characters.selection(src))
+end)
+```
+
+## `character:frozen` [#character-frozen]
+
+`(charId, reason, by)` A staff member froze a character. If it was being played, the player
+is already back in selection.
+
+```lua
+bzn.hooks.on('character:frozen', function(charId, reason, by)
+    sendToDiscord(('Character %d frozen by %s: %s'):format(charId, by, reason))
+end)
+```
+
+## `character:unfrozen` [#character-unfrozen]
+
+`(charId, by)` A staff member lifted the freeze.
+
+```lua
+bzn.hooks.on('character:unfrozen', function(charId, by)
+    sendToDiscord(('Character %d unfrozen by %s'):format(charId, by))
+end)
+```
+
+## `character:loading` <Badge>before</Badge> [#character-loading]
+
+`(src, character)` The character is loading. Modules load their data here. Returning
+`false` stops the load.
+
+```lua
+-- load your data before anything else can ask for it
+bzn.hooks.on('character:loading', function(src, character)
+    local ok, data = pcall(loadFromDb, character.id)
+    if not ok then return false, 'could_not_load_houses' end   -- back to selection
+    houses[character.id] = data
+end)
+```
+
+## `character:loaded` [#character-loaded]
+
+`(src, character)` Everything is loaded and the character is about to spawn. The usual
+place to set up your own data.
+
+```lua
+bzn.hooks.on('character:loaded', function(src, character)
+    myData[character.id] = loadFromDb(character.id)
+end)
+```
+
+## `character:starter` [#character-starter]
+
+`(src, character)` The character's first load: the starter kit is being given. Add your own
+part here; it runs once per character, ever.
+
+```lua
+bzn.hooks.on('character:starter', function(src, character)
+    exports.ox_inventory:AddItem(src, 'phone', 1)
+end)
+```
+
+## `character:unloading` [#character-unloading]
+
+`(src, character, reason)` The character is leaving: `logout`, `dropped` or `shutdown`.
+**Save and clean up here**; the character is still loaded.
+
+```lua
+bzn.hooks.on('character:unloading', function(src, character, reason)
+    saveToDb(character.id, houses[character.id])   -- the character is still loaded here
+end)
+```
+
+## `character:unloaded` [#character-unloaded]
+
+`(src, character, reason)` The character is gone. Forget anything you kept in memory.
+
+```lua
+bzn.hooks.on('character:unloaded', function(src, character, reason)
+    houses[character.id] = nil
+end)
+```
+
+## `character:metaChanged` [#character-metachanged]
+
+`(charId, key, value, old)` A [metadata](/docs/characters/server#metadata) value changed.
+`value` is `nil` when it was removed.
+
+```lua
+bzn.hooks.on('character:metaChanged', function(charId, key, value)
+    if key == 'phone' then phoneBook[charId] = value end
+end)
+```

@@ -1,0 +1,15 @@
+---
+title: "Staff role"
+description: "The local player got or lost a staff role."
+---
+
+## `role:changed` [#role-changed]
+
+`(role)` The local player's staff role changed (`nil` for none). Use it to show or hide
+admin UI.
+
+```lua
+bzn.hooks.on('role:changed', function(role)
+    SendNUIMessage({ action = 'staff', visible = role ~= nil })
+end)
+```

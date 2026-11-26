@@ -1,0 +1,42 @@
+---
+title: "Staff roles and bans"
+description: "A user got or lost a role, or was banned."
+---
+
+## Staff roles [#staff-roles]
+
+### `role:changed` [#role-changed]
+
+`(userId, role, old, src)` A user's role changed. `role` or `old` is `nil` for no role.
+
+```lua
+-- src is the player when the user is online, otherwise nil
+bzn.hooks.on('role:changed', function(userId, role, old, src)
+    sendToDiscord(('User %d: role %s -> %s'):format(userId, old or 'none', role or 'none'))
+    if src then TriggerClientEvent('myadmin:refresh', src) end
+end)
+```
+
+## Bans [#bans]
+
+### `ban:created` [#ban-created]
+
+`(banId, userId, reason, by, expiresAt)` A user was banned. `expiresAt` is a unix time, or
+`nil` for a permanent ban.
+
+```lua
+bzn.hooks.on('ban:created', function(banId, userId, reason, by, expiresAt)
+    sendToDiscord(('Ban %d: user %d by %s until %s: %s')
+        :format(banId, userId, by, expiresAt and os.date('%d-%m-%Y %H:%M', expiresAt) or 'never', reason))
+end)
+```
+
+### `ban:revoked` [#ban-revoked]
+
+`(banId, userId, by)` A ban was lifted before it ended.
+
+```lua
+bzn.hooks.on('ban:revoked', function(banId, userId, by)
+    sendToDiscord(('Ban %d on user %d lifted by %s'):format(banId, userId, by))
+end)
+```

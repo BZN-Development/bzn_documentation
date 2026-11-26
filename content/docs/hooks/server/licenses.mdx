@@ -1,0 +1,83 @@
+---
+title: "Licenses"
+description: "Licences issued and revoked, and penalty points."
+---
+
+## `licenses:beforeGrant` <Badge>before</Badge> [#licenses-beforegrant]
+
+`(charId, name, opts)` A licence is about to be issued.
+
+```lua
+bzn.hooks.on('licenses:beforeGrant', function(charId, name)
+    if name == 'weapon' and hasRecord(charId) then return false, 'has_record' end
+end)
+```
+
+## `licenses:granted` [#licenses-granted]
+
+`(charId, name, license)` A licence was issued, or issued again. `license` is the licence as stored.
+
+```lua
+bzn.hooks.on('licenses:granted', function(charId, name, license)
+    local src = bzn.characters.getSource(charId)
+    if src and name == 'driver' then
+        exports.ox_inventory:AddItem(src, 'driving_licence', 1)
+    end
+end)
+```
+
+## `licenses:revoked` [#licenses-revoked]
+
+`(charId, name, by)` The licence was taken away. `by` is `'points'` when penalty points did it.
+
+```lua
+bzn.hooks.on('licenses:revoked', function(charId, name, by)
+    if by == 'points' then alertPolice(charId, name) end
+end)
+```
+
+## `licenses:updated` [#licenses-updated]
+
+`(charId, name, key, value)` A value in the licence's free data changed (`setData`), or a
+suspension was lifted (`key` = `'suspendedUntil'`).
+
+```lua
+bzn.hooks.on('licenses:updated', function(charId, name, key, value)
+    print(('character %d, %s: %s = %s'):format(charId, name, key, json.encode(value)))
+end)
+```
+
+## `licenses:beforePoints` <Badge>before</Badge> [#licenses-beforepoints]
+
+`(charId, name, count, opts)` Penalty points are about to be given. `opts` = `{ reason?, by? }`.
+
+```lua
+-- emergency vehicles on a call get no points
+bzn.hooks.on('licenses:beforePoints', function(charId, name)
+    if name == 'driver' and isOnEmergencyCall(charId) then return false, 'on_call' end
+end)
+```
+
+## `licenses:points` [#licenses-points]
+
+`(charId, name, points, max)` Points were added or taken off. `points` is how many the
+character has now.
+
+```lua
+-- warn at one point from the limit
+bzn.hooks.on('licenses:points', function(charId, name, points, max)
+    local src = bzn.characters.getSource(charId)
+    if src and points == max - 1 then notify(src, 'One more point and you lose your licence') end
+end)
+```
+
+## `licenses:suspended` [#licenses-suspended]
+
+`(charId, name, untilTime)` Too many points with `onMax = 'suspend'`. The licence is valid
+again at `untilTime` (unix time). With `onMax = 'revoke'` you get `licenses:revoked` instead.
+
+```lua
+bzn.hooks.on('licenses:suspended', function(charId, name, untilTime)
+    alertPolice(charId, name, os.date('%d-%m-%Y %H:%M', untilTime))
+end)
+```

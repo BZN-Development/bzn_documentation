@@ -1,0 +1,169 @@
+---
+title: "Server hooks"
+description: "What bzn tells your server code, and where you can step in."
+---
+
+Every hook bzn fires on the server, one page per area. The tables below list all of them:
+click a hook for what it means and an example.
+
+How to listen, and the difference between the two kinds, is on the [Hooks](/docs/hooks) page.
+
+## Reading a hook [#reading-a-hook]
+
+Every hook is written the same way: its name, the arguments your function gets, when it fires, and an example.
+
+```lua
+bzn.hooks.on('groups:added', function(charId, name, grade, src)
+    -- (charId, name, grade, src) is what the page lists after the name
+end)
+```
+
+- A hook marked <Badge>before</Badge> runs **before** the thing happens and can stop it:
+  return `false, 'reason'`. The others run after it has happened.
+- `src` is the player's server id, or `nil` when the character is offline.
+- `charId` is the character's id. Get the player from it with `bzn.characters.getSource(charId)`.
+
+## Core and players [#core]
+
+bzn starting up, and players connecting and leaving.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`core:ready`](/docs/hooks/server/core#core-ready) | `()` |  |
+| [`module:started`](/docs/hooks/server/core#module-started) | `(name)` |  |
+| [`player:beforeConnect`](/docs/hooks/server/core#player-beforeconnect) | `(src, { name, identifiers })` | <Badge>before</Badge> |
+| [`player:identified`](/docs/hooks/server/core#player-identified) | `(src, player)` |  |
+| [`player:stateChanged`](/docs/hooks/server/core#player-statechanged) | `(src, state, from)` |  |
+| [`player:dropping`](/docs/hooks/server/core#player-dropping) | `(src, player, reason)` |  |
+| [`player:dropped`](/docs/hooks/server/core#player-dropped) | `(src, player, reason)` |  |
+
+## Characters [#characters]
+
+Creating, deleting, selecting, freezing, loading and unloading a character, and its metadata.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`character:beforeCreate`](/docs/hooks/server/characters#character-beforecreate) | `(src, data)` | <Badge>before</Badge> |
+| [`character:created`](/docs/hooks/server/characters#character-created) | `(src, character)` |  |
+| [`character:beforeDelete`](/docs/hooks/server/characters#character-beforedelete) | `(src, character)` | <Badge>before</Badge> |
+| [`character:deleted`](/docs/hooks/server/characters#character-deleted) | `(src, character)` |  |
+| [`character:deleteRequested`](/docs/hooks/server/characters#character-deleterequested) | `(src, character)` |  |
+| [`character:selecting`](/docs/hooks/server/characters#character-selecting) | `(src)` |  |
+| [`character:selectionChanged`](/docs/hooks/server/characters#character-selectionchanged) | `(src)` |  |
+| [`character:frozen`](/docs/hooks/server/characters#character-frozen) | `(charId, reason, by)` |  |
+| [`character:unfrozen`](/docs/hooks/server/characters#character-unfrozen) | `(charId, by)` |  |
+| [`character:loading`](/docs/hooks/server/characters#character-loading) | `(src, character)` | <Badge>before</Badge> |
+| [`character:loaded`](/docs/hooks/server/characters#character-loaded) | `(src, character)` |  |
+| [`character:starter`](/docs/hooks/server/characters#character-starter) | `(src, character)` |  |
+| [`character:unloading`](/docs/hooks/server/characters#character-unloading) | `(src, character, reason)` |  |
+| [`character:unloaded`](/docs/hooks/server/characters#character-unloaded) | `(src, character, reason)` |  |
+| [`character:metaChanged`](/docs/hooks/server/characters#character-metachanged) | `(charId, key, value, old)` |  |
+
+## Spawning [#spawning]
+
+Placing a loaded character in the world.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`spawn:beforeSpawn`](/docs/hooks/server/spawning#spawn-beforespawn) | `(src, character, point)` | <Badge>before</Badge> |
+| [`spawn:spawned`](/docs/hooks/server/spawning#spawn-spawned) | `(src, character, point)` |  |
+
+## Staff roles and bans [#staff]
+
+A user got or lost a role, or was banned.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`role:changed`](/docs/hooks/server/staff#role-changed) | `(userId, role, old, src)` |  |
+| [`ban:created`](/docs/hooks/server/staff#ban-created) | `(banId, userId, reason, by, expiresAt)` |  |
+| [`ban:revoked`](/docs/hooks/server/staff#ban-revoked) | `(banId, userId, by)` |  |
+
+## Groups [#groups]
+
+Joining, leaving, grades, duty, and groups created or edited in game.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`groups:beforeAdd`](/docs/hooks/server/groups#groups-beforeadd) | `(charId, name, grade)` | <Badge>before</Badge> |
+| [`groups:added`](/docs/hooks/server/groups#groups-added) | `(charId, name, grade, src)` |  |
+| [`groups:beforeSetGrade`](/docs/hooks/server/groups#groups-beforesetgrade) | `(charId, name, grade, old)` | <Badge>before</Badge> |
+| [`groups:gradeChanged`](/docs/hooks/server/groups#groups-gradechanged) | `(charId, name, grade, old, src)` |  |
+| [`groups:beforeRemove`](/docs/hooks/server/groups#groups-beforeremove) | `(charId, name, grade)` | <Badge>before</Badge> |
+| [`groups:removed`](/docs/hooks/server/groups#groups-removed) | `(charId, name, grade, src)` |  |
+| [`groups:beforeDuty`](/docs/hooks/server/groups#groups-beforeduty) | `(charId, name, previous)` | <Badge>before</Badge> |
+| [`groups:dutyChanged`](/docs/hooks/server/groups#groups-dutychanged) | `(charId, name, previous, src)` |  |
+| [`groups:beforeCreate`](/docs/hooks/server/groups#groups-beforecreate) | `(name, def)` | <Badge>before</Badge> |
+| [`groups:created`](/docs/hooks/server/groups#groups-created) | `(name)` |  |
+| [`groups:updated`](/docs/hooks/server/groups#groups-updated) | `(name, field, loadedMembers)` |  |
+| [`groups:deleted`](/docs/hooks/server/groups#groups-deleted) | `(name)` |  |
+
+## Accounts [#accounts]
+
+Money moving, cash, and accounts created, frozen or renamed.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`accounts:beforeTransaction`](/docs/hooks/server/accounts#accounts-beforetransaction) | `(data)` | <Badge>before</Badge> |
+| [`accounts:transaction`](/docs/hooks/server/accounts#accounts-transaction) | `(data)` |  |
+| [`accounts:created`](/docs/hooks/server/accounts#accounts-created) | `(account)` |  |
+| [`accounts:changed`](/docs/hooks/server/accounts#accounts-changed) | `(accountId, action, detail)` |  |
+| [`accounts:cash`](/docs/hooks/server/accounts#accounts-cash) | `({ source, charId, amount, entry })` |  |
+
+## Payroll [#payroll]
+
+Salary reaching an account.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`payroll:paid`](/docs/hooks/server/payroll#payroll-paid) | `(charId, group, amount, paidBy)` |  |
+
+## Status [#status]
+
+A status was set, ran out or recovered.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`status:changed`](/docs/hooks/server/status#status-changed) | `(charId, name, value, reason)` |  |
+| [`status:empty`](/docs/hooks/server/status#status-empty) | `(charId, name)` |  |
+| [`status:recovered`](/docs/hooks/server/status#status-recovered) | `(charId, name)` |  |
+
+## Licenses [#licenses]
+
+Licences issued and revoked, and penalty points.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`licenses:beforeGrant`](/docs/hooks/server/licenses#licenses-beforegrant) | `(charId, name, opts)` | <Badge>before</Badge> |
+| [`licenses:granted`](/docs/hooks/server/licenses#licenses-granted) | `(charId, name, license)` |  |
+| [`licenses:revoked`](/docs/hooks/server/licenses#licenses-revoked) | `(charId, name, by)` |  |
+| [`licenses:updated`](/docs/hooks/server/licenses#licenses-updated) | `(charId, name, key, value)` |  |
+| [`licenses:beforePoints`](/docs/hooks/server/licenses#licenses-beforepoints) | `(charId, name, count, opts)` | <Badge>before</Badge> |
+| [`licenses:points`](/docs/hooks/server/licenses#licenses-points) | `(charId, name, points, max)` |  |
+| [`licenses:suspended`](/docs/hooks/server/licenses#licenses-suspended) | `(charId, name, untilTime)` |  |
+
+## Vehicles [#vehicles]
+
+Owned vehicles: spawning, parking, plates, impound, keys and locks.
+
+| Hook | Arguments | Can stop it |
+| --- | --- | --- |
+| [`vehicles:created`](/docs/hooks/server/vehicles#vehicles-created) | `(id)` |  |
+| [`vehicles:deleted`](/docs/hooks/server/vehicles#vehicles-deleted) | `(id)` |  |
+| [`vehicles:beforeSpawn`](/docs/hooks/server/vehicles#vehicles-beforespawn) | `(id, coords)` | <Badge>before</Badge> |
+| [`vehicles:spawned`](/docs/hooks/server/vehicles#vehicles-spawned) | `(id, entity)` |  |
+| [`vehicles:beforePark`](/docs/hooks/server/vehicles#vehicles-beforepark) | `(id, garage)` | <Badge>before</Badge> |
+| [`vehicles:parked`](/docs/hooks/server/vehicles#vehicles-parked) | `(id, garage)` |  |
+| [`vehicles:despawned`](/docs/hooks/server/vehicles#vehicles-despawned) | `(id)` |  |
+| [`vehicles:lost`](/docs/hooks/server/vehicles#vehicles-lost) | `(id)` |  |
+| [`vehicles:ownerChanged`](/docs/hooks/server/vehicles#vehicles-ownerchanged) | `(id, charId, group)` |  |
+| [`vehicles:plateChanged`](/docs/hooks/server/vehicles#vehicles-platechanged) | `(id, shown, old)` |  |
+| [`vehicles:plateTaken`](/docs/hooks/server/vehicles#vehicles-platetaken) | `(plate, used)` |  |
+| [`vehicles:showingPlate`](/docs/hooks/server/vehicles#vehicles-showingplate) | `(plate, entity)` |  |
+| [`vehicles:beforeImpound`](/docs/hooks/server/vehicles#vehicles-beforeimpound) | `(id, opts)` | <Badge>before</Badge> |
+| [`vehicles:impounded`](/docs/hooks/server/vehicles#vehicles-impounded) | `(id, info)` |  |
+| [`vehicles:released`](/docs/hooks/server/vehicles#vehicles-released) | `(id, garage)` |  |
+| [`vehicles:keyGiven`](/docs/hooks/server/vehicles#vehicles-keygiven) | `(id, charId, minutes)` |  |
+| [`vehicles:keyRemoved`](/docs/hooks/server/vehicles#vehicles-keyremoved) | `(id, charId)` |  |
+| [`vehicles:locksChanged`](/docs/hooks/server/vehicles#vehicles-lockschanged) | `(id, version)` |  |
+| [`vehicles:beforeLock`](/docs/hooks/server/vehicles#vehicles-beforelock) | `(entity, locked, charId)` | <Badge>before</Badge> |
+| [`vehicles:lockChanged`](/docs/hooks/server/vehicles#vehicles-lockchanged) | `(entity, locked, id, charId)` |  |

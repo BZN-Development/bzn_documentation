@@ -1,0 +1,228 @@
+---
+title: "Vehicles"
+description: "Owned vehicles: spawning, parking, plates, impound, keys and locks."
+---
+
+## `vehicles:created` [#vehicles-created]
+
+`(id)` A vehicle was created (bought, given by staff). `id` is its vehicle id.
+
+```lua
+bzn.hooks.on('vehicles:created', function(id)
+    local vehicle = bzn.vehicles.get(id)
+    registerInsurance(id, vehicle.owner)
+end)
+```
+
+## `vehicles:deleted` [#vehicles-deleted]
+
+`(id)` A vehicle was deleted for good.
+
+```lua
+bzn.hooks.on('vehicles:deleted', function(id)
+    cancelInsurance(id)
+end)
+```
+
+## `vehicles:beforeSpawn` <Badge>before</Badge> [#vehicles-beforespawn]
+
+`(id, coords)` A vehicle is about to be put in the world at `coords`.
+
+```lua
+-- a garage with a fee: no spawn while the owner owes money
+bzn.hooks.on('vehicles:beforeSpawn', function(id, coords)
+    if owesGarageFee(id) then return false, 'unpaid_fee' end
+end)
+```
+
+## `vehicles:spawned` [#vehicles-spawned]
+
+`(id, entity)` The vehicle is in the world. `entity` is the server entity.
+
+```lua
+bzn.hooks.on('vehicles:spawned', function(id, entity)
+    Entity(entity).state:set('tracker', hasTracker(id), true)
+end)
+```
+
+## `vehicles:beforePark` <Badge>before</Badge> [#vehicles-beforepark]
+
+`(id, garage)` A vehicle is about to be parked in `garage`.
+
+```lua
+-- the police garage is for police vehicles only
+bzn.hooks.on('vehicles:beforePark', function(id, garage)
+    local vehicle = bzn.vehicles.get(id)
+    if garage == 'police' and vehicle.group ~= 'police' then return false, 'police_only' end
+end)
+```
+
+## `vehicles:parked` [#vehicles-parked]
+
+`(id, garage)` The vehicle is in the garage and out of the world.
+
+```lua
+bzn.hooks.on('vehicles:parked', function(id, garage)
+    lastParked[id] = os.time()   -- e.g. for a parking fee per day
+end)
+```
+
+## `vehicles:despawned` [#vehicles-despawned]
+
+`(id)` Left the world (parked, impounded, deleted).
+
+```lua
+bzn.hooks.on('vehicles:despawned', function(id)
+    blips[id] = nil   -- whatever you kept for the vehicle while it was out
+end)
+```
+
+## `vehicles:lost` [#vehicles-lost]
+
+`(id)` Removed from the world by something else (a cleanup script). It follows `onRestart`.
+
+```lua
+bzn.hooks.on('vehicles:lost', function(id)
+    print(('vehicle %d was removed from the world by another script'):format(id))
+end)
+```
+
+## `vehicles:ownerChanged` [#vehicles-ownerchanged]
+
+`(id, charId, group)` The vehicle has a new owner: a character (`charId`) or a group (`group`); the other is `nil`.
+
+```lua
+bzn.hooks.on('vehicles:ownerChanged', function(id, charId, group)
+    cancelInsurance(id)   -- the new owner takes out their own
+end)
+```
+
+## `vehicles:plateChanged` [#vehicles-platechanged]
+
+`(id, shown, old)` The plate on the vehicle changed (re-registration or a fake plate).
+
+```lua
+-- a police database keyed by plate
+bzn.hooks.on('vehicles:plateChanged', function(id, shown, old)
+    wanted[shown], wanted[old] = wanted[old], nil
+end)
+```
+
+## `vehicles:plateTaken` [#vehicles-platetaken]
+
+`(plate, used)` An owned vehicle got a plate (`used` = true) or gave one up (false). Real
+and fake plates. For a [plate guard](/docs/modules/vehicles#plates).
+
+```lua
+-- a plate guard keeps its own list
+bzn.hooks.on('vehicles:plateTaken', function(plate, used)
+    taken[plate] = used or nil
+end)
+```
+
+## `vehicles:showingPlate` [#vehicles-showingplate]
+
+`(plate, entity)` An owned vehicle is about to show `plate` in the world. `entity` is that
+vehicle, or `nil` when it does not exist yet. Handlers run before the plate is set, so a
+plate guard can take the plate off any other vehicle first.
+
+```lua
+bzn.hooks.on('vehicles:showingPlate', function(plate, entity)
+    for _, vehicle in ipairs(GetAllVehicles()) do
+        if vehicle ~= entity and GetVehicleNumberPlateText(vehicle):gsub('%s+$', '') == plate then
+            SetVehicleNumberPlateText(vehicle, randomPlate())
+        end
+    end
+end)
+```
+
+## `vehicles:beforeImpound` <Badge>before</Badge> [#vehicles-beforeimpound]
+
+`(id, opts)` A vehicle is about to be impounded. `opts` = `{ reason?, fee?, actor?, minutes?, lot? }`.
+
+```lua
+-- emergency vehicles are never impounded
+bzn.hooks.on('vehicles:beforeImpound', function(id, opts)
+    local vehicle = bzn.vehicles.get(id)
+    if vehicle.group == 'police' or vehicle.group == 'ambulance' then
+        return false, 'emergency_vehicle'
+    end
+end)
+```
+
+## `vehicles:impounded` [#vehicles-impounded]
+
+`(id, info)` `info = { reason, fee, actor, minutes, lot }`
+
+```lua
+-- tell the owner, if they are online
+bzn.hooks.on('vehicles:impounded', function(id, info)
+    local vehicle = bzn.vehicles.get(id)
+    local src = vehicle.owner and bzn.characters.getSource(vehicle.owner)
+    if src then notify(src, ('Your %s was impounded: %s'):format(vehicle.plate, info.reason)) end
+end)
+```
+
+## `vehicles:released` [#vehicles-released]
+
+`(id, garage)` The vehicle left the impound and is in `garage`.
+
+```lua
+bzn.hooks.on('vehicles:released', function(id, garage)
+    print(('vehicle %d released to %s'):format(id, garage))
+end)
+```
+
+## `vehicles:keyGiven` [#vehicles-keygiven]
+
+`(id, charId, minutes)` `minutes` nil = permanent.
+
+```lua
+bzn.hooks.on('vehicles:keyGiven', function(id, charId, minutes)
+    local src = bzn.characters.getSource(charId)
+    if src then notify(src, minutes and ('You have the key for %d minutes'):format(minutes) or 'You got a key') end
+end)
+```
+
+## `vehicles:keyRemoved` [#vehicles-keyremoved]
+
+`(id, charId)` `charId` nil = every key.
+
+```lua
+bzn.hooks.on('vehicles:keyRemoved', function(id, charId)
+    local src = charId and bzn.characters.getSource(charId)
+    if src then notify(src, 'Your key no longer works') end
+end)
+```
+
+## `vehicles:locksChanged` [#vehicles-lockschanged]
+
+`(id, version)` Old key items no longer work.
+
+```lua
+bzn.hooks.on('vehicles:locksChanged', function(id, version)
+    print(('vehicle %d has new locks (version %d)'):format(id, version))
+end)
+```
+
+## `vehicles:beforeLock` <Badge>before</Badge> [#vehicles-beforelock]
+
+`(entity, locked, charId)`
+
+```lua
+-- no unlocking a police car during a chase
+bzn.hooks.on('vehicles:beforeLock', function(entity, locked, charId)
+    if not locked and Entity(entity).state.inPursuit then return false, 'in_pursuit' end
+end)
+```
+
+## `vehicles:lockChanged` [#vehicles-lockchanged]
+
+`(entity, locked, id, charId)` `id` nil for a temporary vehicle; `charId` nil for a trusted call.
+
+```lua
+-- an alarm: someone unlocked the car without a character behind it (a lockpick)
+bzn.hooks.on('vehicles:lockChanged', function(entity, locked, id, charId)
+    if not locked and not charId and id then startAlarm(entity) end
+end)
+```

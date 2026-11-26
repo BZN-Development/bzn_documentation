@@ -1,0 +1,98 @@
+---
+title: "Client"
+---
+
+The client has a copy of the local character's licences, so a UI can ask without the
+server. What a client says it has is never trusted: the server checks again.
+
+### has [#has]
+
+Whether the local character has a licence that is valid right now.
+
+```lua
+bzn.licenses.has(name)
+```
+
+**Returns**
+- `boolean`
+
+```lua
+if bzn.licenses.has('driver') then
+    showDrivingLicenceCard()
+end
+```
+
+### points [#points]
+
+How many penalty points the local character has on a licence right now.
+
+```lua
+bzn.licenses.points(name)
+```
+
+**Returns**
+- count: `integer`
+
+```lua
+local max = bzn.licenses.definitions().driver.points.max
+SendNUIMessage({ action = 'points', count = bzn.licenses.points('driver'), max = max })
+```
+
+### get [#get]
+
+```lua
+bzn.licenses.get(name)
+```
+
+**Returns**
+- license?: `{ name, issuedAt, expiresAt?, issuedBy?, data }`
+
+```lua
+local license = bzn.licenses.get('weapon')
+if license and license.expiresAt then
+    print('runs out ' .. license.expiresAt)   -- unix time
+end
+```
+
+### getAll [#getall]
+
+```lua
+bzn.licenses.getAll()
+```
+
+**Returns**
+- licenses: `table<string, table>` name -> licence
+
+```lua
+for name in pairs(bzn.licenses.getAll()) do
+    print(name, bzn.licenses.has(name) and 'valid' or 'not valid')
+end
+```
+
+### definitions [#definitions]
+
+The licences that exist, for labels.
+
+```lua
+bzn.licenses.definitions()
+```
+
+**Returns**
+- definitions: `table<string, { label, days?, points? }>`
+
+```lua
+local label = bzn.licenses.definitions().driver.label   -- 'Driving licence'
+```
+
+## Hooks [#hooks]
+
+### `licenses:changed` [#licenses-changed]
+
+`(licenses)` The local character's licences were sent again: on load, and whenever one is
+issued, revoked, gets a point or is taken.
+
+```lua
+bzn.hooks.on('licenses:changed', function(licenses)
+    SendNUIMessage({ action = 'licenses', licenses = licenses })
+end)
+```

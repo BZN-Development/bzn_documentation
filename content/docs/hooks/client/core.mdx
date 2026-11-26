@@ -1,0 +1,29 @@
+---
+title: "Core"
+description: "bzn starting up on this client."
+---
+
+## `core:ready` [#core-ready]
+
+bzn_core has started on this client.
+
+```lua
+bzn.hooks.on('core:ready', function()
+    print('bzn is ready on this client')
+end)
+
+-- usually you want this instead: it also runs at once when bzn is already up
+bzn.onReady(function()
+    SendNUIMessage({ action = 'ready' })
+end)
+```
+
+## `module:started` [#module-started]
+
+`(name)` A bzn module started on this client.
+
+```lua
+bzn.hooks.on('module:started', function(name)
+    if name == 'status' then SendNUIMessage({ action = 'showStatusBars' }) end
+end)
+```

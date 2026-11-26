@@ -1,0 +1,67 @@
+---
+title: "Accounts"
+description: "Money moving, cash, and accounts created, frozen or renamed."
+---
+
+## `accounts:beforeTransaction` <Badge>before</Badge> [#accounts-beforetransaction]
+
+`(data)` Money is about to move. `data.kind` is `credit`, `debit`, `transfer` or
+`creditMany`; also `amount`, `account` (or `from`/`to`, or `rows`), `entry` and `charId`
+when a character acts.
+
+```lua
+bzn.hooks.on('accounts:beforeTransaction', function(data)
+    if data.kind == 'transfer' and data.amount > 100000 and data.charId then
+        return false, 'needs_bank_approval'
+    end
+end)
+```
+
+## `accounts:transaction` [#accounts-transaction]
+
+`(data)` Money moved (after the database committed). Same fields, plus the new balances.
+
+```lua
+-- a log of every large transfer
+bzn.hooks.on('accounts:transaction', function(data)
+    if data.kind == 'transfer' and data.amount >= 100000 then
+        sendToDiscord(('Transfer of %d from account %d to %d'):format(data.amount, data.from, data.to))
+    end
+end)
+```
+
+## `accounts:created` [#accounts-created]
+
+`(account)` A new account.
+
+```lua
+bzn.hooks.on('accounts:created', function(account)
+    print(('new %s account %s'):format(account.type, account.number))
+end)
+```
+
+## `accounts:changed` [#accounts-changed]
+
+`(accountId, action, detail)` A non-money change: `member_set`, `member_removed`, `frozen`,
+`unfrozen`, `renamed`, `closed`.
+
+```lua
+bzn.hooks.on('accounts:changed', function(accountId, action, detail)
+    if action == 'frozen' then
+        sendToDiscord(('Account %d was frozen'):format(accountId))
+    end
+end)
+```
+
+## `accounts:cash` [#accounts-cash]
+
+`({ source, charId, amount, entry })` Cash given (`amount` > 0) or taken (&lt; 0).
+
+```lua
+-- watch for large amounts of cash appearing
+bzn.hooks.on('accounts:cash', function(info)
+    if info.amount >= 50000 then
+        sendToDiscord(('Character %d got %d in cash'):format(info.charId, info.amount))
+    end
+end)
+```

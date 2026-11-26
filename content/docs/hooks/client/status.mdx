@@ -1,0 +1,17 @@
+---
+title: "Status"
+description: "A status of the local character got a new anchor."
+---
+
+## `status:changed` [#status-changed]
+
+`(name, value, rate)` A new anchor arrived: the player ate, a rate changed, or an admin set
+it. Between these, read the current value with `bzn.status.get(name)`; it is computed from
+the local clock.
+
+```lua
+-- a HUD only needs to redraw its trend arrow here; the value itself it reads when drawing
+bzn.hooks.on('status:changed', function(name, value, rate)
+    SendNUIMessage({ action = 'status', name = name, value = value, falling = rate < 0 })
+end)
+```

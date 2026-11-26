@@ -1,0 +1,28 @@
+---
+title: "Accounts"
+description: "The accounts the local player can see, and their balances."
+---
+
+## `accounts:changed` [#accounts-changed]
+
+`(accounts)` The list of accounts the player can see was sent again (on load, after joining
+a group, after a membership or freeze change).
+
+```lua
+bzn.hooks.on('accounts:changed', function(accounts)
+    SendNUIMessage({ action = 'accounts', accounts = accounts })
+end)
+```
+
+## `accounts:balance` [#accounts-balance]
+
+`(accountId, balance)` One balance changed.
+
+```lua
+bzn.hooks.on('accounts:balance', function(accountId, balance)
+    local personal = bzn.accounts.getPersonal()
+    if personal and accountId == personal.id then
+        SendNUIMessage({ action = 'bank', value = balance })
+    end
+end)
+```

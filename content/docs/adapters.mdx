@@ -1,0 +1,148 @@
+---
+title: "Adapters"
+---
+
+bzn_core never calls oxmysql, ox_inventory, ox_lib or a game native directly. Each of them
+sits behind an **adapter**: a small set of functions core owns, with a **provider** that
+fills them in.
+
+| Adapter | In bzn_core | Provider today | Stands for |
+| --- | --- | --- | --- |
+| `adapters/database` | `bzn.db` | `oxmysql` | the database |
+| `adapters/inventory` | `bzn.inventory` | `ox_inventory` | items, stashes, trunks |
+| `adapters/lib` | `bzn.lib` | `ox_lib` | locales, callbacks, notifications, the client cache |
+| `adapters/engine` | `bzn.engine` | `gta5` | the game's own functions (peds, vehicles, entities) |
+
+**The rule:** only files under `bzn_core/adapters/` may name oxmysql, ox_inventory, ox_lib
+or a game native. Core and every module call `bzn.db`, `bzn.inventory`, `bzn.lib` and
+`bzn.engine`.
+
+That is what makes the dependencies replaceable. A new inventory, a new library or a new
+game (RedM today, whatever comes after GTA V later) is a new provider file. Nothing else in
+core changes.
+
+This page is for anyone who writes a [module inside bzn_core](/docs/modules/writing-modules)
+or wants to port bzn to another inventory, library or game. A separate resource that uses
+the [`bzn` import](/docs/using-bzn) is not bound by the rule: it may call ox_lib or
+natives as it likes.
+
+## One skeleton [#one-skeleton]
+
+All four adapters are built the same way:
+
+```
+adapters/<name>/
+    interface.lua      the functions core relies on, and registerProvider
+    <provider>.lua     fills them in for one dependency
+```
+
+`interface.lua` holds a `REQUIRED` list. When a provider registers, every function on the
+list must be there, or bzn_core stops while loading with a message that names the missing
+one:
+
+```
+lib provider ox_lib (server) is missing notify
+```
+
+So a provider that is not finished fails at startup, not in the middle of a player's
+session.
+
+## Database: `bzn.db` [#database-bzn-db]
+
+```lua
+local rows = bzn.db.query('SELECT `id` FROM `bzn_vehicles` WHERE `owner` = ?', { charId })
+local row = bzn.db.single('SELECT * FROM `bzn_users` WHERE `id` = ?', { userId })
+local count = bzn.db.scalar('SELECT COUNT(*) FROM `bzn_characters`')
+local changed = bzn.db.update('UPDATE ... WHERE `id` = ?', { id })
+local id = bzn.db.insert('INSERT INTO ... VALUES (?)', { value })
+```
+
+Also `prepare`, `transaction`, `startTransaction`, the `...NoWait` forms used while the
+resource is stopping, and `waitReady`.
+
+Every call is timed. One that takes `db.slowQueryMs` (150 ms) or longer is written to the
+log with the start of its SQL, so a slow query is found before players notice it:
+
+```
+[bzn:db] slow query (212 ms): SELECT * FROM `bzn_account_transactions` WHERE ...
+```
+
+## Inventory: `bzn.inventory` [#inventory-bzn-inventory]
+
+`addItem`, `removeItem`, `getItemCount`, `search`, `items`, `getInventory`,
+`removeInventory`, `registerHook`, `forceOpen`, `onItemUsed`, `onStart`, `isReady`.
+
+`bzn.inventory.provider` is the name of the provider (`'ox_inventory'`).
+
+## Library: `bzn.lib` [#library-bzn-lib]
+
+| | Server | Client |
+| --- | --- | --- |
+| `locale(key, ...)` | yes | yes |
+| `waitFor`, `setInterval` | yes | yes |
+| `notify(src, type, text)` | yes | |
+| `callback(...)` | yes | |
+| `onCallback`, `onCache`, `cache` | | yes |
+| `getVehicleProperties`, `setVehicleProperties` | | yes |
+
+One thing is not behind the adapter: `require`. It comes from ox_lib and is what loads the
+files, so it cannot be wrapped by a file it loads.
+
+## Engine: `bzn.engine` [#engine-bzn-engine]
+
+Functions are named after the native they stand for, with a lower-case first letter:
+
+```lua
+local coords = bzn.engine.getEntityCoords(entity)
+local ped = bzn.engine.getPlayerPed(src)
+```
+
+A provider registers the native itself where the game has one (same arguments, same
+results, no extra call), and a function of its own where it has none:
+
+```lua
+bzn.engine.damagePlayer(src, points)   -- the server takes health from a player
+```
+
+`bzn.engine.game` is the game the server runs: `'gta5'` or `'rdr3'`.
+
+Not behind the adapter, because it is Cfx and the same in every game: `Entity()`,
+`Player()`, state bags, events, exports, commands, ACE, convars and timers.
+
+### Modules for one game [#modules-for-one-game]
+
+A module that only makes sense in one game says so in its `module.lua`:
+
+```lua
+return {
+    name = 'vehicles',
+    games = { 'gta5' },
+}
+```
+
+On another game it does not start, and `bzn modules` shows `skipped: not for rdr3`. A module
+without `games` runs in every game and may only use the engine functions on the `REQUIRED`
+list; a module for one game may use everything its provider has.
+
+## Locks: `bzn.lock` [#locks-bzn-lock]
+
+Not an adapter, but in the same family: a tool every module shares.
+
+Lua runs one coroutine at a time, but anything that waits (the database, a client callback)
+lets another one in. "Check, wait, then write" is therefore not safe on its own: two calls
+can both pass the check before either writes. A lock makes the second call wait.
+
+```lua
+function vehicles.spawn(id, coords)
+    local _ <close> = bzn.lock.acquire('veh:' .. id)
+    -- only one coroutine per key is here at a time;
+    -- released when the function ends, also on return and on error
+end
+```
+
+- Waiters get the lock in the order they asked.
+- **Not re-entrant**: taking a key you already hold waits forever. Never call a function
+  that takes the same key from inside the lock.
+
+This is why spawning the same vehicle from two places at once gives one vehicle and one
+`already_out`.

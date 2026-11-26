@@ -1,0 +1,326 @@
+---
+title: "bzn_vehicledata"
+---
+
+Mileage, bodywork deformation (dents) and a plate guard for bzn's
+[owned vehicles](/docs/modules/vehicles), and the [photos of vehicle models](#vehicle-photos), in one resource. Repository: [BZN-Development/bzn_vehicledata](https://github.com/BZN-Development/bzn_vehicledata).
+
+Mileage and dents live in entity state bags that bzn_core [saves with the vehicle](/docs/modules/vehicles#saved-state-bags)
+in the same writes as its position and fuel, and sets again when it spawns. The resource
+itself writes nothing to the database.
+
+## Install [#install]
+
+```ini
+ensure bzn_core
+ensure ox_inventory
+ensure bzn_vehicledata
+```
+
+Requires bzn_core with the vehicles module, ox_lib and OneSync. Settings are in the
+resource's `config.lua`.
+
+## Mileage [#mileage]
+
+- **Counted on the server.** Every `interval` seconds the position of each owned vehicle with a
+  driver is compared to the last one. A client cannot fake it.
+- Towed vehicles (no driver) and teleports (faster than `maxSpeed`) do not count.
+- Kept in **metres** in the `mileage` state bag, and shown in km or miles (`unit`). The unit can
+  be changed any time: the stored value is always metres.
+- The state bag is updated every `stateBagStep` metres (100 m), not every metre, so players near
+  the vehicle are not flooded with updates.
+
+### getMileage [#getmileage]
+
+Mileage of a vehicle in the world. Server and client.
+
+```lua
+exports.bzn_vehicledata:getMileage(entity, unit?)
+```
+
+- entity: `integer`
+- unit?: `'km'` | `'mi'` default `Config.mileage.unit`
+
+**Returns**
+- mileage?: `number` one decimal
+
+```lua
+-- client: an odometer on a HUD
+local km = exports.bzn_vehicledata:getMileage(cache.vehicle, 'km')
+```
+
+### getMileageById [#getmileagebyid]
+
+Server. Also when the vehicle is parked.
+
+```lua
+exports.bzn_vehicledata:getMileageById(vehicleId, unit?)
+```
+
+**Returns**
+- mileage?: `number`
+
+```lua
+-- a dealership showing a used car
+local km = exports.bzn_vehicledata:getMileageById(id, 'km')
+```
+
+### convert [#convert]
+
+Server. Metres to km or miles.
+
+```lua
+exports.bzn_vehicledata:convert(metres, unit?)
+```
+
+### getUnit [#getunit]
+
+Client. The unit the server shows mileage in.
+
+```lua
+exports.bzn_vehicledata:getUnit()   -- 'km' or 'mi'
+```
+
+You can also read the state bag directly: `Entity(vehicle).state.mileage` (metres).
+
+## Deformation [#deformation]
+
+- When an owned vehicle takes damage, the client that owns it measures the dents (once the hits
+  have settled, `settle` seconds) at points spread over its body (`grid`) and sends them to the
+  server.
+- The server checks them: only from the client that owns the vehicle, sane numbers, at most once
+  a second. It keeps the **worst dent per point**, so dents only ever get worse, and sets the
+  `deformation` state bag. Works with `sv_stateBagStrictMode`.
+- Every client that sees the vehicle dents it to match, a few passes spread over frames, and the
+  vehicle's health is put back afterwards (denting must not damage the engine).
+- [`bzn.vehicles.repair`](/docs/modules/vehicles/server#repair) clears the dents.
+- Only the vehicle `types` in config (default: cars). Bikes and aircraft look wrong when dents
+  are put back.
+
+Written for bzn from GTA's own natives (`GetVehicleDeformationAtPos`, `SetVehicleDamage`,
+`SetVehicleDeformationFixed`).
+
+### getDeformation [#getdeformation]
+
+Server. The dents of a vehicle in the world (what is saved).
+
+```lua
+exports.bzn_vehicledata:getDeformation(entity)
+```
+
+**Returns**
+- dents?: `{ x, y, z, size }[]` a point on the body (offset from the centre) and how deep the dent is
+
+### measureDeformation [#measuredeformation]
+
+Client. Measures the dents on a vehicle now.
+
+```lua
+exports.bzn_vehicledata:measureDeformation(vehicle)
+```
+
+## Plate guard [#plate-guard]
+
+Keeps plates in the world unique to look at:
+
+- A vehicle nobody owns that shows an owned vehicle's plate gets a new one.
+- With `ambientPlates` (bzn_core's vehicles config), traffic and parked cars get plates in
+  the server's `plateFormat`, so owned vehicles cannot be told apart from traffic.
+
+This is **cosmetic**. Trunks are safe without it: bzn_core checks every trunk that opens
+against the exact vehicle being opened ([Trunks never leak](/docs/modules/vehicles#trunks-never-leak)).
+Turn the guard off and the only difference is that a traffic car may now and then show the
+same plate as a player's car.
+
+How it works:
+
+- It is **driven by core's hooks**. `vehicles:plateTaken` keeps its list of taken plates up
+  to date. `vehicles:showingPlate` tells it an owned vehicle is about to show a plate, and
+  any other vehicle showing it gets a new one first.
+- A **slow sweep** catches the rest. The world is walked in small steps over `sweep`
+  milliseconds, and a vehicle whose plate has not changed since it was last found fine costs
+  two natives and one comparison.
+- Vehicles core spawned (state bag `bzn:managed`) are never touched.
+
+The plate format and `ambientPlates` are bzn_core's settings
+(`bzn_config/server/vehicles.lua`); the guard reads them from there.
+
+## Vehicle photos [#vehicle-photos]
+
+A photo of every vehicle model, for a dealer or a garage menu: square WebP files with a
+transparent background, one per model, kept in this resource's `photos/` folder and served
+over the server's own HTTP endpoint. A player only downloads the photos they look at, and a
+new photo works without a restart.
+
+The photos are made by the staff tool **bzn_photos** (start it only while you take photos;
+bzn_vehicledata must be running, it saves them):
+
+```
+/photos vehicles [all|type|class|model] [missing|all] [green|blue]
+```
+
+| Argument | What |
+| --- | --- |
+| `all` (default) | every vehicle model your client knows, add-on vehicles too. Trains are left out unless you ask for them |
+| a type | `automobile`, `bike`, `boat`, `heli`, `plane`, `submarine`, `trailer`, `train` |
+| a class | GTA's class by name or number: `compacts` 0, `sedans` 1, `suvs` 2, `coupes` 3, `muscle` 4, `sportsclassics` 5, `sports` 6, `super` 7, `motorcycles` 8, `offroad` 9, `industrial` 10, `utility` 11, `vans` 12, `cycles` 13, `boats` 14, `helicopters` 15, `planes` 16, `service` 17, `emergency` 18, `military` 19, `commercial` 20, `trains` 21, `openwheel` 22 |
+| a model | the spawn name, `adder`. Several with commas and no spaces: `phantom,bus,bati` |
+| `missing` (default) / `all` | only models without a photo, or every model again |
+| `green` (default) / `blue` | the screen to start against. A vehicle in the screen's colour is shot against the other one by itself |
+
+```
+ensure bzn_photos
+/photos vehicles adder all                              one model, again
+/photos vehicles phantom,bus,bati,dinghy,luxor all   a truck, a bus, a motorcycle, a boat and a plane
+/photos vehicles super                                  every super car without a photo
+/photos vehicles                                        everything without a photo
+stop bzn_photos
+```
+
+Backspace stops a run. A model that does not load, or whose photo fails, is skipped and the
+run goes on; the skipped models are listed at the end, in F8 and in the server console.
+
+**The camera is not set per model.** It always looks from the same direction, and its
+distance is worked out from the model's size (`GetModelDimensions`): the closest it can
+stand with all eight corners of the model's box inside the picture. The photo is then
+cropped to the vehicle and fitted into the square, so a moped, a bus and a cargo plane all
+fill it the same and none is cut off.
+
+**Every photo is taken the same way**, so photos taken months apart match: the same time of
+day and weather, and a vehicle made new for the photo with the model's first colour
+combination, livery 0, every extra on, the plate `BZN`, no dirt, no damage, no window tint, and
+engine and lights off. Change the direction, the colour or the plate in `Config.vehicles`
+of bzn_photos:
+
+```lua
+Config.vehicles = {
+    -- yaw: degrees around the vehicle from straight ahead (positive is its left side),
+    -- pitch: degrees above level, fill: how much of the picture the vehicle may take.
+    -- pitch 0 is level, 6 about eye height at a car, 12 shows the roof.
+    camera = { yaw = 35.0, pitch = 6.0, fov = 30.0, fill = 0.88 },
+    colour = false,   -- or one colour for all: { primary = { 200, 200, 200 }, secondary = { 20, 20, 20 } }
+    plate = 'BZN',
+    extras = 'on',    -- 'off' leaves some models without a roof or doors
+    livery = 0,
+}
+```
+
+A photo is saved as `photos/<model>.webp`, the model's spawn name in lower case
+(`photos/adder.webp`), and served as `http://<server>/bzn_vehicledata/photo/<model>.webp`.
+The photos are made per server and are not in git.
+
+### photoUrl [#photourl]
+
+Client. The address of a model's photo, for an `<img>` in your NUI.
+
+```lua
+exports.bzn_vehicledata:photoUrl(model)
+```
+
+- model: `string` | `integer` the spawn name (`'adder'`, any case), or the model hash
+
+**Returns**
+- url?: `string` nil when the name cannot be a model's, or the hash is not a vehicle the client knows
+
+The address is returned whether or not the photo exists. A model without a photo answers
+404, so show the model's name instead (`onerror` on the `<img>`).
+
+```lua
+-- client: a dealer's list
+SendNUIMessage({
+    action = 'showVehicle',
+    label = 'Adder',
+    photo = exports.bzn_vehicledata:photoUrl('adder'),
+    -- http://<server>/bzn_vehicledata/photo/adder.webp
+})
+
+-- the vehicle the player sits in
+local photo = exports.bzn_vehicledata:photoUrl(GetEntityModel(cache.vehicle))
+```
+
+### hasPhoto [#hasphoto]
+
+Server. Does this model have a photo?
+
+```lua
+exports.bzn_vehicledata:hasPhoto(model)
+```
+
+- model: `string` the spawn name
+
+**Returns**
+- has: `boolean`
+
+```lua
+-- a dealer that only lists models with a photo
+if exports.bzn_vehicledata:hasPhoto('adder') then
+    stock[#stock + 1] = 'adder'
+end
+```
+
+### missingPhotos [#missingphotos]
+
+Server. Which of these models have no photo yet. bzn_photos uses it for `missing`.
+
+```lua
+exports.bzn_vehicledata:missingPhotos(models)
+```
+
+- models: `string[]`
+
+**Returns**
+- indexes: `integer[]` positions in `models`
+
+```lua
+local models = { 'adder', 'bus', 'luxor' }
+for _, i in ipairs(exports.bzn_vehicledata:missingPhotos(models)) do
+    print(models[i] .. ' has no photo')
+end
+```
+
+### savePhoto [#savephoto]
+
+Server. Saves a model's photo, replacing the one it had. bzn_photos calls it; use it
+yourself only if you make the photos another way.
+
+```lua
+exports.bzn_vehicledata:savePhoto(model, base64)
+```
+
+- model: `string` the spawn name (letters, digits and `_`)
+- base64: `string` a WebP file as base64 or as a data URI, at most 512 KB
+
+**Returns**
+- ok: `boolean`
+- err?: `'invalid_model'` | `'too_big'` | `'not_webp'` | `'write_failed'` (the `photos/` folder is missing)
+
+```lua
+local ok, err = exports.bzn_vehicledata:savePhoto('adder', webpBase64)
+if not ok then print('photo not saved: ' .. err) end
+```
+
+## Config [#config]
+
+```lua
+Config.plates = {
+    enabled = true,
+    sweep = 2500,         -- milliseconds for one look at every vehicle in the world
+}
+
+Config.mileage = {
+    enabled = true,
+    unit = 'km',          -- 'km' or 'mi'
+    interval = 2,         -- seconds between samples
+    maxSpeed = 100.0,     -- m/s; a faster jump is a teleport
+    stateBagStep = 100,   -- metres between state bag updates
+}
+
+Config.deformation = {
+    enabled = true,
+    types = { automobile = true },
+    grid = 5,             -- points per side: 5 = up to 125 points
+    threshold = 0.05,     -- smaller dents are ignored
+    settle = 1.5,         -- seconds after the last hit before measuring
+    maxPasses = 12,       -- passes when putting dents back
+}
+```

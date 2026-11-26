@@ -1,0 +1,15 @@
+---
+title: "Licenses"
+description: "The local character's licences."
+---
+
+## `licenses:changed` [#licenses-changed]
+
+`(licenses)` The local character's licences were sent again: on load, and whenever one is
+issued, revoked, gets a point or is taken. `licenses` is name -> licence.
+
+```lua
+bzn.hooks.on('licenses:changed', function(licenses)
+    SendNUIMessage({ action = 'licenses', licenses = licenses })
+end)
+```

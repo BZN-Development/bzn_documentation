@@ -1,0 +1,53 @@
+---
+title: "Client"
+---
+
+### character.get [#character-get]
+
+The local player's loaded character.
+
+```lua
+bzn.character.get()
+```
+
+**Returns**
+- character?: [`Character`](/docs/types#character) nil while in character selection
+
+```lua
+local character = bzn.character.get()
+if character then
+    print('Playing as ' .. character.firstName)
+end
+```
+
+### character.getMeta [#character-getmeta]
+
+A [metadata](/docs/characters/server#metadata) value of the local character. Only keys the server marked
+as replicated are here; everything else is `nil`.
+
+```lua
+bzn.character.getMeta(key)
+```
+
+- key: `string`
+
+**Returns**
+- value: `any`
+
+```lua
+local number = bzn.character.getMeta('myphone:number')
+if number then
+    SendNUIMessage({ action = 'number', value = number })
+end
+```
+
+## Hooks [#hooks]
+
+```lua
+bzn.hooks.on('character:selecting', function() end)          -- open your selection UI
+bzn.hooks.on('character:loaded', function(character) end)
+bzn.hooks.on('character:unloaded', function(reason) end)
+bzn.hooks.on('character:metaChanged', function(key, value) end)   -- a replicated key changed
+```
+
+See [client hooks](/docs/hooks/client/characters).

@@ -1,0 +1,12 @@
+{
+  "title": "Modules",
+  "pages": [
+    "groups",
+    "accounts",
+    "payroll",
+    "status",
+    "licenses",
+    "vehicles",
+    "writing-modules"
+  ]
+}

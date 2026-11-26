@@ -1,0 +1,9 @@
+{
+  "title": "Using bzn from your resource",
+  "pages": [
+    "index",
+    "server",
+    "client"
+  ],
+  "defaultOpen": true
+}

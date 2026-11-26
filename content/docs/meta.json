@@ -1,0 +1,29 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Guide---",
+    "getting-started",
+    "config",
+    "inventory",
+    "bridges",
+    "commands",
+    "troubleshooting",
+    "---Using bzn---",
+    "using-bzn",
+    "---Core---",
+    "characters",
+    "spawn",
+    "roles",
+    "bans",
+    "database",
+    "adapters",
+    "---Modules---",
+    "...modules",
+    "---Add-ons---",
+    "...addons",
+    "---Reference---",
+    "hooks",
+    "types"
+  ]
+}

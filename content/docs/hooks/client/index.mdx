@@ -1,0 +1,96 @@
+---
+title: "Client hooks"
+description: "What bzn tells your client code about the local player."
+---
+
+Every hook bzn fires on the client, one page per area. The tables below list all of them:
+click a hook for what it means and an example.
+
+How to listen is on the [Hooks](/docs/hooks) page.
+
+## What client hooks are for [#what-client-hooks-are-for]
+
+Client hooks are about **the local player only**: their character, their groups, their money, their statuses. They are how a HUD, a phone or a menu stays up to date without asking the server.
+
+```lua
+bzn.hooks.on('groups:dutyChanged', function(duty, previous)
+    SendNUIMessage({ action = 'duty', group = duty })
+end)
+```
+
+- There are no before-hooks on the client: nothing here can stop an action. Rules belong on the server.
+- What a client knows is a copy. The server checks everything again, so never trust it for a decision that matters.
+
+## Core [#core]
+
+bzn starting up on this client.
+
+| Hook | Arguments |
+| --- | --- |
+| [`core:ready`](/docs/hooks/client/core#core-ready) | `()` |
+| [`module:started`](/docs/hooks/client/core#module-started) | `(name)` |
+
+## Characters [#characters]
+
+Selection, the local character loading and leaving, and its metadata.
+
+| Hook | Arguments |
+| --- | --- |
+| [`character:selecting`](/docs/hooks/client/characters#character-selecting) | `()` |
+| [`character:selectionChanged`](/docs/hooks/client/characters#character-selectionchanged) | `()` |
+| [`character:loaded`](/docs/hooks/client/characters#character-loaded) | `(character)` |
+| [`character:unloaded`](/docs/hooks/client/characters#character-unloaded) | `(reason)` |
+| [`character:metaChanged`](/docs/hooks/client/characters#character-metachanged) | `(key, value)` |
+
+## Spawning [#spawning]
+
+The local character being placed in the world.
+
+| Hook | Arguments |
+| --- | --- |
+| [`spawn:spawning`](/docs/hooks/client/spawning#spawn-spawning) | `(point)` |
+| [`spawn:pedReady`](/docs/hooks/client/spawning#spawn-pedready) | `(ped, point)` |
+| [`spawn:spawned`](/docs/hooks/client/spawning#spawn-spawned) | `(point)` |
+| [`spawn:blocked`](/docs/hooks/client/spawning#spawn-blocked) | `(reason)` |
+
+## Staff role [#staff]
+
+The local player got or lost a staff role.
+
+| Hook | Arguments |
+| --- | --- |
+| [`role:changed`](/docs/hooks/client/staff#role-changed) | `(role)` |
+
+## Groups [#groups]
+
+The local player's groups and duty.
+
+| Hook | Arguments |
+| --- | --- |
+| [`groups:changed`](/docs/hooks/client/groups#groups-changed) | `(memberships, duty)` |
+| [`groups:dutyChanged`](/docs/hooks/client/groups#groups-dutychanged) | `(duty, previous)` |
+
+## Accounts [#accounts]
+
+The accounts the local player can see, and their balances.
+
+| Hook | Arguments |
+| --- | --- |
+| [`accounts:changed`](/docs/hooks/client/accounts#accounts-changed) | `(accounts)` |
+| [`accounts:balance`](/docs/hooks/client/accounts#accounts-balance) | `(accountId, balance)` |
+
+## Licenses [#licenses]
+
+The local character's licences.
+
+| Hook | Arguments |
+| --- | --- |
+| [`licenses:changed`](/docs/hooks/client/licenses#licenses-changed) | `(licenses)` |
+
+## Status [#status]
+
+A status of the local character got a new anchor.
+
+| Hook | Arguments |
+| --- | --- |
+| [`status:changed`](/docs/hooks/client/status#status-changed) | `(name, value, rate)` |

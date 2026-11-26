@@ -1,0 +1,112 @@
+---
+title: "Licenses"
+---
+
+What a character is allowed to do on paper: a driving licence, a firearms permit, a hunting
+licence, a business permit. With optional penalty points.
+
+- **[Server](/docs/modules/licenses/server)**: issue, revoke, check, points.
+- **[Client](/docs/modules/licenses/client)**: the local character's own licences.
+
+## How it works [#how-it-works]
+
+- A licence is on the **character**. It has the day it was issued, optionally a day it runs
+  out, who issued it, and free `data` any script can use (a category, a note).
+- **One row per licence per character.** Issuing it again updates the same row.
+- **Nothing counts down.** Whether a licence is valid is worked out from the clock when
+  someone asks.
+- An **expired** licence stays on the character as expired until it is issued again or
+  revoked, so the police can see that someone had one.
+- Works for characters that are not online too.
+
+## Penalty points [#penalty-points]
+
+A licence with `points` in its definition can get penalty points. Leave `points` out and
+the licence has none.
+
+```lua
+driver = {
+    label = 'Driving licence',
+    points = { max = 3, days = 3, onMax = 'revoke', blockDays = 3 },
+},
+```
+
+| Option | |
+| --- | --- |
+| `max` | this many points at once and the licence is taken |
+| `days` | how long one point stays; may be a fraction (`0.5` = 12 hours) |
+| `onMax` | `'suspend'` or `'revoke'`: what happens at `max` points |
+| `suspendDays` | with `'suspend'`: how long the licence is taken for |
+| `blockDays` | with `'revoke'`: how long before a new one can be issued; leave out for no waiting time |
+
+Each point has **its own end**: three points given on three different days disappear on
+three different days. Expired points are simply not counted. The points are wiped when the
+licence is taken.
+
+### What happens at `max` [#what-happens-at-max]
+
+| `onMax` | The licence | Getting it back |
+| --- | --- | --- |
+| `'suspend'` | stays on the character, not valid for `suspendDays` | valid again by itself when the time is up |
+| `'revoke'` without `blockDays` | removed | can be issued again at once |
+| `'revoke'` with `blockDays` | stays on the character as revoked | `grant` answers `'blocked'` until the time is up; then it has to be issued again |
+
+Staff can end a suspension or a waiting time early with `bzn licenses unsuspend`. Ending a
+waiting time does not give the licence back: it still has to be issued again.
+
+The player is told in the server's language when they get a point and when the licence is
+taken.
+
+## Config [#config]
+
+Shared (`bzn_config/shared/licenses.lua`): clients show the labels.
+
+```lua
+return {
+    licenses = {
+        driver = { label = 'Driving licence', points = { max = 3, days = 3, onMax = 'revoke', blockDays = 3 } },
+        weapon = { label = 'Firearms permit', days = 90 },
+        -- your own:
+        hunting = { label = 'Hunting licence', days = 30 },
+    },
+}
+```
+
+| Option | |
+| --- | --- |
+| `label` | shown to players |
+| `days` | how long a new one is valid; leave out for one that never runs out |
+| `points` | penalty points, see above; leave out for a licence without them |
+
+A name is lower-case letters, digits and `_`, at most 32 characters. Another resource can
+add its own kind while the server runs with [`licenses.register`](/docs/modules/licenses/server#register).
+
+## Commands [#commands]
+
+For `admin` and up. A target is a server id, `me` or `char:<id>`.
+
+```
+bzn licenses types
+bzn licenses list <target>
+bzn licenses grant <target> <license> [days|never]
+bzn licenses revoke <target> <license>
+bzn licenses point <target> <license> [count] [reason...]
+bzn licenses unpoint <target> <license> [count]          oldest first; no count = all
+bzn licenses unsuspend <target> <license>
+```
+
+```
+bzn licenses grant me driver
+bzn licenses point 12 driver 2 Running a red light
+bzn licenses list 12
+```
+
+## Tables [#tables]
+
+`bzn_character_licenses`: one row per licence a character has. Points, a suspension and a
+waiting time live in the row's `data`, so there is never more than that one row. Removed
+with the character.
+
+## Hooks [#hooks]
+
+[Server hooks](/docs/hooks/server/licenses) · [Client hooks](/docs/hooks/client/licenses)

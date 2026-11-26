@@ -1,0 +1,123 @@
+---
+title: "Bans"
+---
+
+A ban is on a **user** (the person), not on a character. It has a reason, who gave it and
+an optional end. Bans are part of core: nothing to install.
+
+## Who a ban stops [#who-a-ban-stops]
+
+A connection is refused when any of these is true:
+
+| | |
+| --- | --- |
+| It is the banned user | the same Rockstar license |
+| It shares a stored identifier | a second Rockstar license on the same Discord, Steam or Cfx.re account (`matchIdentifiers`) |
+| It shares hardware tokens | at least `minMatchingTokens` of them (2) |
+
+Never on **one** token alone: a single token can be the same on different machines (virtual
+machines, cloud PCs), and that would ban strangers.
+
+The check runs while the player connects, before `player:beforeConnect` and before anything
+else can let them in. It runs again for players who were online while bzn_core restarted.
+
+The player sees the reason, when the ban ends and the ban's id, in the server's language:
+
+```
+You are banned from this server.
+Reason: Cheating
+Expires: 2026-12-02 18:30
+Ban id: 14
+```
+
+## Commands [#commands]
+
+For `admin` and up.
+
+```
+bzn ban <target> <perm|30m|12h|7d|2w> <reason...>
+bzn unban <ban id>
+bzn bans                      bans in force
+bzn bans <target>             every ban of one user, lifted and expired ones too
+```
+
+A target is a server id, `user:<id>`, or an identifier the user has connected with
+(`discord:123...`), so a player who has left can be banned too. A duration is a number with
+`m`, `h`, `d` or `w`, or `perm`.
+
+In game, staff can only ban users **below their own role**. The console can ban anyone.
+
+```
+bzn ban 12 7d Combat logging
+bzn ban discord:123456789012345678 perm Cheating
+bzn unban 14
+```
+
+## Server [#server]
+
+### bans.ban [#bans-ban]
+
+Bans a user and drops them if they are online.
+
+```lua
+bzn.bans.ban(userId, reason, by, seconds?)
+```
+
+- userId: `integer`
+- reason: `string`
+- by: `string` who gave it, for the record
+- seconds?: `integer` nil or 0 = permanent
+
+**Returns**
+- banId?: `integer`
+- err?: `'unknown_user'` | `'invalid_reason'`
+
+```lua
+-- an anticheat
+local player = bzn.players.get(src)
+bzn.bans.ban(player.userId, 'Spawned a weapon', 'anticheat', 7 * 86400)
+```
+
+### bans.unban [#bans-unban]
+
+```lua
+bzn.bans.unban(banId, by)
+```
+
+- banId: `integer`
+- by: `string` who lifted it, for the record
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_active'` (already lifted or expired)
+
+```lua
+-- an appeal was approved on your website
+bzn.bans.unban(banId, 'appeals')
+```
+
+## Hooks [#hooks]
+
+- `ban:created (banId, userId, reason, by, expiresAt)` `expiresAt` is a unix time, or `nil`
+  for a permanent ban
+- `ban:revoked (banId, userId, by)`
+
+```lua
+bzn.hooks.on('ban:created', function(banId, userId, reason, by)
+    sendToDiscord(('User %d banned by %s: %s'):format(userId, by, reason))
+end)
+```
+
+## Config [#config]
+
+`bzn_config/server/bans.lua`
+
+| Option | Default | |
+| --- | --- | --- |
+| `matchIdentifiers` | `true` | a connection that shares an identifier with a banned user is refused too |
+| `minMatchingTokens` | `2` | hardware tokens that must match; `0` = tokens are not used. `1` is treated as 2 |
+
+## Tables [#tables]
+
+`bzn_bans` (one row per ban, kept after it ends) and `bzn_user_tokens` (the hardware tokens
+each user has connected with, so a later ban covers them).

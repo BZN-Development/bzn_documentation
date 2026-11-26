@@ -1,0 +1,96 @@
+---
+title: "Core and players"
+description: "bzn starting up, and players connecting and leaving."
+---
+
+## Core [#core]
+
+### `core:ready` [#core-ready]
+
+bzn_core and every module have started. Most resources use `bzn.onReady(fn)` instead.
+
+```lua
+bzn.hooks.on('core:ready', function()
+    print('bzn is up: every module has started')
+end)
+
+-- usually you want this instead: it also runs at once when bzn is already up
+bzn.onReady(function()
+    bzn.vehicles.registerField('mileage')
+end)
+```
+
+### `module:started` [#module-started]
+
+`(name)` A bzn module started.
+
+```lua
+bzn.hooks.on('module:started', function(name)
+    if name == 'vehicles' then garagesAvailable = true end
+end)
+```
+
+## Players [#players]
+
+### `player:beforeConnect` <Badge>before</Badge> [#player-beforeconnect]
+
+`(src, { name, identifiers })` A player is connecting (deferrals). Return `false, 'message'`
+to refuse: the message is shown to the player. Whitelists and queues go here. [Bans](/docs/bans)
+are checked by core before this hook runs.
+
+```lua
+bzn.hooks.on('player:beforeConnect', function(src, info)
+    if not isWhitelisted(info.identifiers.discord) then
+        return false, 'You are not whitelisted. Apply on our Discord.'
+    end
+end)
+```
+
+### `player:identified` [#player-identified]
+
+`(src, player)` The player joined and has a user id (`player.userId`).
+
+```lua
+-- greet a returning user and note when they were here
+bzn.hooks.on('player:identified', function(src, player)
+    lastSeen[player.userId] = os.time()
+    print(('%s joined as user %d'):format(player.name, player.userId))
+end)
+```
+
+### `player:stateChanged` [#player-statechanged]
+
+`(src, state, from)` States: `identified`, `selecting`, `loaded`, `unloading`.
+
+```lua
+-- a queue or a status page that shows who is choosing a character
+bzn.hooks.on('player:stateChanged', function(src, state, from)
+    if state == 'selecting' then choosing[src] = true
+    elseif from == 'selecting' then choosing[src] = nil end
+end)
+```
+
+### `player:dropping` [#player-dropping]
+
+`(src, player, reason)` The player is leaving and still registered. Their character
+unloads after this.
+
+```lua
+-- the player and their character can still be read here
+bzn.hooks.on('player:dropping', function(src, player, reason)
+    local character = bzn.characters.get(src)
+    if character and isInCombat(character.id) then
+        logCombatLog(player.userId, character.id, reason)
+    end
+end)
+```
+
+### `player:dropped` [#player-dropped]
+
+`(src, player, reason)` The player is gone.
+
+```lua
+bzn.hooks.on('player:dropped', function(src, player, reason)
+    openMenus[src] = nil   -- forget what you kept per server id
+end)
+```

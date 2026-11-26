@@ -1,0 +1,17 @@
+---
+title: "Payroll"
+description: "Salary reaching an account."
+---
+
+## `payroll:paid` [#payroll-paid]
+
+`(charId, group, amount, paidBy)` Salary reached a character's account. `paidBy` is `city` or
+`account`.
+
+```lua
+-- a payslip
+bzn.hooks.on('payroll:paid', function(charId, group, amount, paidBy)
+    local src = bzn.characters.getSource(charId)
+    if src then notify(src, ('Salary from %s: $%d'):format(group, amount)) end
+end)
+```

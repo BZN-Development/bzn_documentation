@@ -1,0 +1,47 @@
+---
+title: "Documentation"
+description: "bzn is a modular, performance-first FiveM framework: a small core, modules you can switch off, and add-ons built on the same public API you use."
+---
+
+## Where to start [#where-to-start]
+
+<Cards>
+  <Card title="Getting started" href="/docs/getting-started">
+    Install bzn_core, set up the database and permissions, and make yourself the first admin.
+  </Card>
+  <Card title="Using bzn from your resource" href="/docs/using-bzn">
+    One import gives your resource the whole API, on the server and the client.
+  </Card>
+  <Card title="Configuration" href="/docs/config">
+    Your server only writes what it changes. Every option, and where it lives.
+  </Card>
+  <Card title="Commands" href="/docs/commands">
+    Everything staff can do with `bzn`, and which role each command needs.
+  </Card>
+</Cards>
+
+## What is in the box [#what-is-in-the-box]
+
+| Part | What it gives you |
+| --- | --- |
+| [Players and characters](/docs/characters) | users, characters, slots, selection, metadata |
+| [Spawning](/docs/spawn) | where a character appears, and saved positions |
+| [Staff roles](/docs/roles) and [bans](/docs/bans) | who may do what, and who may not join |
+| [Groups](/docs/modules/groups) | jobs, gangs and businesses with grades, permissions and duty |
+| [Accounts](/docs/modules/accounts) | bank accounts, shared accounts, group accounts and cash |
+| [Payroll](/docs/modules/payroll) | salary for time on duty |
+| [Status](/docs/modules/status) | hunger, thirst, stress and your own |
+| [Licenses](/docs/modules/licenses) | driving licences and permits, with penalty points |
+| [Vehicles](/docs/modules/vehicles) | owned vehicles, plates, keys, locks and impound |
+
+## How the pages are written [#how-the-pages-are-written]
+
+Every function has the same four parts, in the same order:
+
+1. **What it does**, in a sentence or two.
+2. **The call**, with its arguments and their types.
+3. **What it returns**, including every error string.
+4. **An example** you can copy.
+
+A `?` after a name means it can be left out or can be `nil`. Functions that can fail return
+`false, '<error>'`: a short string for your code, not a text for players.

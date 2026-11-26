@@ -1,0 +1,135 @@
+---
+title: "Server"
+---
+
+Statuses exist for loaded characters. Values are 0-100 and always computed for now.
+
+### get [#get]
+
+The current value of a status.
+
+```lua
+bzn.status.get(charId, name)
+```
+
+- charId: `integer`
+- name: `string`
+
+**Returns**
+- value?: `number` nil if the character is not loaded
+
+```lua
+if bzn.status.get(charId, 'hunger') < 20 then
+    -- hungry
+end
+```
+
+### getAll [#getall]
+
+```lua
+bzn.status.getAll(charId)
+```
+
+- charId: `integer`
+
+**Returns**
+- values: `table<string, number>`
+
+```lua
+local values = bzn.status.getAll(charId)   -- { hunger = 73.4, thirst = 61.0, stress = 0 }
+```
+
+### set [#set]
+
+Sets a status (clamped to 0-100).
+
+```lua
+bzn.status.set(charId, name, value, reason?)
+```
+
+- charId: `integer`
+- name: `string`
+- value: `number`
+- reason?: `string` passed on to the `status:changed` hook
+
+**Returns**
+- ok: `boolean`
+- err?: `'unknown_status'` | `'not_loaded'` | `'invalid_value'`
+
+```lua
+bzn.status.set(charId, 'stress', 0, 'therapy')
+```
+
+### add [#add]
+
+Adds to a status; a negative amount takes away.
+
+```lua
+bzn.status.add(charId, name, amount, reason?)
+```
+
+- charId: `integer`
+- name: `string`
+- amount: `number`
+- reason?: `string`
+
+**Returns**
+- ok: `boolean`
+- err?: `'unknown_status'` | `'not_loaded'` | `'invalid_value'`
+
+```lua
+bzn.status.add(charId, 'stress', 15, 'shootout')
+```
+
+### setModifier [#setmodifier]
+
+Adds, changes or (with `nil`) removes a named rate modifier, in points per minute. The rate
+is the status's `perMinute` plus every modifier, so scripts never overwrite each other.
+
+```lua
+bzn.status.setModifier(charId, name, key, perMinute?)
+```
+
+- charId: `integer`
+- name: `string`
+- key: `string` your name for it, e.g. `'running'` or `'myresource:sick'`
+- perMinute?: `number`
+
+**Returns**
+- ok: `boolean`
+- err?: `'unknown_status'` | `'not_loaded'` | `'invalid_value'`
+
+```lua
+bzn.status.setModifier(charId, 'thirst', 'running', -1.0)   -- thirsty faster
+bzn.status.setModifier(charId, 'thirst', 'running', nil)    -- back to normal
+```
+
+### rate [#rate]
+
+The current rate of a status: `perMinute` plus every modifier.
+
+```lua
+bzn.status.rate(charId, name)
+```
+
+**Returns**
+- perMinute?: `number`
+
+```lua
+print(bzn.status.rate(charId, 'thirst'))   -- -1.5, or -2.5 while running
+```
+
+## Hooks [#hooks]
+
+### status:changed [#status-changed]
+
+`(charId, name, value, reason)` A status was set or added to. Not fired for the slow change
+over time.
+
+### status:empty [#status-empty]
+
+`(charId, name)` A status reached 0.
+
+### status:recovered [#status-recovered]
+
+`(charId, name)` A status left 0 again.

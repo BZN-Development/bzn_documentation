@@ -1,0 +1,390 @@
+---
+title: "Commands"
+---
+
+Every command bzn and its add-ons have, in one place.
+
+| | |
+| --- | --- |
+| [For players](#for-players) | `/logout`, `/reloadskin`, `/hud` |
+| [Staff: `bzn ...`](#the-bzn-command) | everything in bzn_core, under one command |
+| [Staff: add-ons](#add-on-commands) | the appearance editor, clothing data, the selection scene |
+| [Development tools](#development-tools) | test and stress commands; never on a live server |
+
+## For players [#for-players]
+
+| Command | From | What |
+| --- | --- | --- |
+| `/logout` | bzn_core | back to character selection. The name is config `characters.logoutCommand` (`false` turns it off); `characters.logoutCooldown` seconds between uses |
+| `/reloadskin` | [bzn_appearance](/docs/addons/appearance#commands) | a fresh ped with the saved look, for when clothes show wrong. Not in vehicles, combat, water or while falling |
+| `/hud` | bzn_interface | hides or shows the HUD. The player can give it a key in the game's key bindings |
+| `/hud <design>` | bzn_interface | chooses a HUD design; an unknown name lists the ones the server allows |
+
+## The `bzn` command [#the-bzn-command]
+
+Everything in bzn_core is under one command, `bzn`. It works in the server console, and in
+game for staff. Every use is written to the server log with who ran it.
+
+`bzn` on its own lists the subcommands. In chat it is `/bzn ...`; in the console just
+`bzn ...`.
+
+## Who can run what [#who-can-run-what]
+
+Every subcommand has a lowest [staff role](/docs/roles). A player below it is refused with
+`needs the role <role> or higher`; a player with no role cannot use `bzn` at all. The
+console can run everything.
+
+| Lowest role | Subcommands |
+| --- | --- |
+| `mod` | `modules`, `save`, `status` |
+| `admin` | `role`, `slots`, `char`, `ban`, `unban`, `bans`, `groups`, `licenses`, `vehicles` |
+| `senioradmin` | `accounts`, `payroll` |
+| `dev` | `config` |
+
+Roles include the ones below them, so a `dev` can run everything.
+
+<Callout type="warn">
+
+`bzn` is not protected by the ACE `command.bzn`: FiveM gives that ACE to every player for a
+command that is not restricted. Never use it to tell staff from players. Use
+[`bzn.roles.has`](/docs/roles#roles-has).
+
+</Callout>
+
+## Targets [#targets]
+
+| Form | Means |
+| --- | --- |
+| `me` | yourself. From the console: the one player who is online |
+| `12` | the online player with server id 12 |
+| `char:34` | character 34, online or offline |
+| `user:5` | user 5 (roles, slots, characters) |
+| `license:abc…`, `fivem:123`, `discord:…` | the user who has connected with that identifier (slots, characters) |
+| `group:police` | the police group's account (accounts only) |
+| `acc:7` | account 7 (accounts only) |
+| `4821-093317` | an account number (accounts only) |
+
+`me` works wherever a target is asked for, so you never have to look up your own id:
+
+```
+bzn status me hunger 100
+bzn accounts info me
+bzn groups add me police 2
+```
+
+From the console `me` is the only player online, which is handy when you test alone. With
+nobody or more than one player online it is refused.
+
+## Core [#core]
+
+```
+bzn modules                      every module and its status
+bzn save                         write all pending saves now
+bzn config <section>             the merged config of a section
+```
+
+```
+bzn modules                 groups started, example disabled, ...
+bzn config accounts         what the accounts module runs with right now
+```
+
+## Characters and slots [#characters-and-slots]
+
+```
+bzn slots info <target>
+bzn slots add <target> <amount> [note]
+bzn slots remove <target> <amount> [note]
+
+bzn char list <target>             every character of a user, deleted ones included
+bzn char info <charId>
+bzn char freeze <charId> <reason>  the reason is shown to the player
+bzn char unfreeze <charId>
+bzn char deletions                 characters waiting for a deletion to be approved
+bzn char approve <charId>
+bzn char deny <charId> [reason]
+bzn char restore <charId>          bring a deleted character back
+```
+
+A user has `slots.base` slots plus what `bzn slots add` gives, never more than `slots.max`.
+Removing slots never touches characters: a user with more characters than slots just
+cannot create new ones.
+
+Because the console can target offline users by identifier, a web store can give slots
+after a purchase. With Tebex, a command like this (check the variable names your store
+offers):
+
+```
+bzn slots add fivem:{id} 1 tebex {transaction}
+```
+
+```
+bzn char list 12                   every character of the user on server id 12
+bzn char freeze 34 Under investigation
+bzn slots add user:5 1 won the giveaway
+```
+
+## Roles [#roles]
+
+```
+bzn role list
+bzn role set <id|user:<id>> <mod|admin|senioradmin|dev>
+bzn role remove <id|user:<id>>
+```
+
+```
+bzn role set 12 mod                  the player on server id 12 becomes a moderator
+bzn role set user:5 admin            also when they are offline
+bzn role remove 12
+```
+
+In game you can only change roles below your own, so the first `dev` is set from the server
+console. See [Staff roles](/docs/roles).
+
+## Bans [#bans]
+
+```
+bzn ban <target> <perm|30m|12h|7d|2w> <reason...>
+bzn unban <ban id>
+bzn bans [target]                  bans in force, or every ban of one user
+```
+
+In game you can only ban users below your own role. See [Bans](/docs/bans).
+
+## Groups [#groups]
+
+```
+bzn groups list [type]
+bzn groups info <group>
+bzn groups player <target>
+bzn groups add <target> <group> <grade>
+bzn groups grade <target> <group> <grade>
+bzn groups remove <target> <group>
+bzn groups duty <target> <group|off>
+bzn groups create <name> <type> <label...>                 grades 0 Member, 1 Owner
+bzn groups label <group> <label...>
+bzn groups addgrade <group> <grade> <salary> <label...>
+bzn groups editgrade <group> <grade> <salary|label> <value...>
+bzn groups perms <group> <grade> [permission ...]           replaces them; none clears
+bzn groups delgrade <group> <grade>                         only if nobody has it
+bzn groups paidby <group> <city|account|default>
+bzn groups delete <group> [force]                           force removes all members first
+```
+
+```
+bzn groups add me police 2           you join the police at grade 2
+bzn groups duty me police            on duty
+bzn groups duty me off               off duty
+bzn groups player 12                 every group of the player on server id 12
+bzn groups create bennys business Benny's Motorworks
+bzn groups addgrade bennys 2 800 Mechanic
+bzn groups perms bennys 2 vehicle.use account.view
+bzn groups paidby bennys account     salaries come out of the group's own account
+```
+
+Admin commands always use `force` for owner protection: they can remove or demote the last
+owner. Type limits, conflicts and before-hooks still apply.
+
+## Accounts [#accounts]
+
+```
+bzn accounts info <account|id|char:<id>>       a character's accounts, or one account with members
+bzn accounts tx <account> [count]              newest transactions
+bzn accounts audit <account> [count]           member, freeze and rename history
+bzn accounts give <account> <amount> [reason...]
+bzn accounts take <account> <amount> [reason...]      also from frozen accounts
+bzn accounts freeze <account> <reason...>
+bzn accounts unfreeze <account>
+bzn accounts cash <id> <+amount|-amount>
+bzn accounts reload <account>                  read again from the database after a manual edit
+```
+
+`tx` is short for transactions: the account's statement, newest first.
+
+```
+bzn accounts info me                 your own accounts and balances
+bzn accounts give me 1000 Starting capital
+bzn accounts tx me 5                 your last five statement lines
+bzn accounts cash 12 +500            500 in cash to the player on server id 12
+bzn accounts freeze group:police Under investigation
+bzn accounts info 4821-093317        one account by its number, with members
+```
+
+The admin is recorded as the actor on every statement line.
+
+## Vehicles [#vehicles]
+
+A vehicle is its id, `vin:<VIN>` or `plate:<PLATE>` (registered plate).
+
+```
+bzn vehicles list <target>
+bzn vehicles info <vehicle>
+bzn vehicles give <target> <model> [garage]
+bzn vehicles spawn <vehicle> <server id>            next to that player
+bzn vehicles park <vehicle> <garage>
+bzn vehicles plate <vehicle> <plate>                re-register
+bzn vehicles fakeplate <vehicle> <plate|off>
+bzn vehicles repair <vehicle>
+bzn vehicles impound <vehicle> <fee> [reason...]
+bzn vehicles release <vehicle> [garage]             free, also before the release time
+bzn vehicles keys <vehicle>
+bzn vehicles givekey <vehicle> <target> [minutes]
+bzn vehicles removekey <vehicle> [target]           no target = every key
+bzn vehicles keyitem <vehicle> <server id>          a key item
+bzn vehicles changelocks <vehicle>                  old keys stop working
+bzn vehicles lock <vehicle>                         toggle (vehicle must be out)
+bzn vehicles delete <vehicle>
+```
+
+```
+bzn vehicles give me sultan              a Sultan of your own, in the default garage
+bzn vehicles list me                     your vehicles with their ids
+bzn vehicles spawn 7 12                  vehicle 7 next to the player on server id 12
+bzn vehicles info plate:02UNI841
+bzn vehicles impound 7 500 Parked on the pavement
+bzn vehicles givekey 7 char:34 60        character 34 may use it for an hour
+bzn vehicles changelocks 7               every old key stops working
+```
+
+## Licenses [#licenses]
+
+```
+bzn licenses types
+bzn licenses list <target>
+bzn licenses grant <target> <license> [days|never]
+bzn licenses revoke <target> <license>
+bzn licenses point <target> <license> [count] [reason...]
+bzn licenses unpoint <target> <license> [count]       oldest first; no count = all
+bzn licenses unsuspend <target> <license>
+```
+
+See [Licenses](/docs/modules/licenses).
+
+## Payroll [#payroll]
+
+```
+bzn payroll status
+bzn payroll owed <id|char:<id>>
+bzn payroll debts <group>
+bzn payroll payout
+bzn payroll collect <id>
+bzn payroll tick <minutes>          bzn:debug 1 only
+```
+
+```
+bzn payroll status                   mode, interval, who is on duty and who pays
+bzn payroll owed me                  what you have earned and not been paid yet
+bzn payroll debts bennys             what the group owes its people
+bzn payroll payout                   pay everything earned now
+```
+
+## Status [#status]
+
+```
+bzn status <id>
+bzn status <id> <name> <value>
+bzn status <id> all <value>
+```
+
+```
+bzn status me                    your own statuses and rates
+bzn status 12 hunger 50
+bzn status me all 100            feed and water yourself
+```
+
+## Add-on commands [#add-on-commands]
+
+These are ordinary commands of their own, restricted with ACE to `group.admin` (which the
+`admin` role and up are in).
+
+| Command | From | What |
+| --- | --- | --- |
+| `/multichar_here` | [bzn_multichar](/docs/addons/multichar#moving-the-scene) | shows the selection scene where you stand and prints the config lines for it in F8 |
+| `/appearance [id]` | [bzn_appearance](/docs/addons/appearance#commands) | opens the free editor for a player (default: yourself) |
+| `/appearance_scan` | bzn_appearance | reads every clothing pack on your client and stores it as the catalog; run it after adding or removing packs |
+| `/appearance_remap model kind slot fromC fromD toC toD [textureOffset]` | bzn_appearance | clothing that moved to another pack; `-` is the base game |
+| `/appearance_tags` | bzn_appearance | reads the clothing tag files again, without a restart |
+| `/clothing_info` | bzn_appearance | pack, drawable, texture, price and shop data of everything you wear |
+| `/clothing_set <slot> <price\|label\|hidden\|section> <value> [texture]` | bzn_appearance | shop data of what you wear in a slot (`11`, or `p0` for props) |
+| `/photos <m\|f\|both> [slot] [pack] [missing\|all] [textures\|first] [green\|blue]` | bzn_photos | photographs clothing for the shops. Also `/photos reshoot`, `/photos parents` and `/photos peds`. Start bzn_photos only while you take photos |
+| `/photos vehicles [all\|type\|class\|model] [missing\|all] [green\|blue]` | [bzn_photos](/docs/addons/vehicledata#vehicle-photos) | photographs vehicle models for dealers and garages: `/photos vehicles adder`, `/photos vehicles super`, `/photos vehicles phantom,bus,luxor all`. The camera distance comes from the model's size |
+
+## Development tools [#development-tools]
+
+From the resources in `[dev]`. They give items, change roles and ban the player who runs
+them, so **never start them on a live server**.
+
+### bzn_test [#bzn-test]
+
+| Command | What |
+| --- | --- |
+| `/bzntest` | runs the whole test suite on your character and prints `passed` / `failed`. It logs you out and in several times: do not touch anything until it is done |
+| `/bzntestveh` | only the vehicle tests |
+| `/testcar` | your own test car (made once, reused), next to you with you in it |
+| `/parkcar` | parks the vehicle you sit in |
+| `/odometer` | the mileage of the vehicle you sit in |
+| `/testitems` | a few items, to check that the inventory survives a logout |
+| `/testgroup add <group> <grade>` \| `grade <group> <grade>` \| `remove <group>` \| `list` | your own groups |
+| `/testduty <group>` \| `off` \| `count <group>` | your own duty |
+| `/testbucket <n>` | moves you into a routing bucket the way a housing script would; `0` goes back |
+| `/testrole <mod\|admin\|senioradmin\|dev\|none>` | sets your own role, as the console would (in game nobody can change their own) |
+| `/testban [duration]` | bans yourself, by default for `1m`; it runs out by itself |
+| `/testmeta <key> [value]` | reads a metadata key of your character, or sets it; `nil` removes it |
+| `/interacthere`, `/interactcar`, `/testpeds`, `/radialtest [n]` | test targets for the interaction prompts and the radial wheel |
+
+### bzn_stress [#bzn-stress]
+
+Stress tests with hundreds of simulated characters. From the server console; the result
+also goes to the chat of the player who ran it.
+
+```
+bznstress all 500          setup, every scenario and a report
+bznstress setup 1000       characters, personal accounts, money
+bznstress accounts 5000    random transfers, 100 at a time, then integrity checks
+bznstress opposite 500     A -> B and B -> A in the same tick (deadlock check)
+bznstress payroll          salary to every character, city and group paid
+bznstress groups           everyone into a group, permission checks
+bznstress vehicles 300     vehicles for everyone, 300 out, save, park, delete
+bznstress doublespawn 5    the same vehicle spawned 3 times in one tick (lock check)
+bznstress cleanup          removes everything it created
+```
+
+### Others [#others]
+
+| Command | From | What |
+| --- | --- | --- |
+| `/vehiclelist` | bzn_vehiclelist | writes every vehicle model your client knows to `vehicles.lua` and `vehicles.json` (ACE `command.vehiclelist`) |
+| `/pedtest`, `/pedtest_feet`, `/pedtest_summary` | bzn_pedtest | step through every ped model and mark which ones work |
+
+## Adding your own [#adding-your-own]
+
+From a bzn module:
+
+```lua
+bzn.commands.register('garages', 'garages <list|impound> ...', function(src, args, out)
+    out('you said %s', args[1] or 'nothing')   -- replies in chat or the console
+end, 'admin')
+```
+
+The last argument is the lowest role that may run it. Leave it out and any staff role may.
+
+Three helpers do the common work:
+
+```lua
+bzn.commands.register('garages', 'garages impound <target>', function(src, args, out)
+    -- a server id, `me` or char:<id> -> a character id (or nil and a message)
+    local charId, err = bzn.commands.resolveCharacter(args[2])
+    if not charId then return out(err) end
+
+    -- 'console' or 'Name (user 12)', for your log
+    local by = bzn.commands.actor(src)
+    out('impounded every vehicle of character %d (by %s)', charId, by)
+end, 'admin')
+```
+
+| Helper | Gives |
+| --- | --- |
+| `bzn.commands.actor(src)` | who ran the command: `'console'` or `'Name (user 12)'` |
+| `bzn.commands.resolveCharacter(target)` | `charId` or `nil, message` from a server id or `char:<id>` |
+| `bzn.commands.resolveUser(target)` | `userId` or `nil, message` from a server id, `user:<id>` or an identifier |
+
+`me` is replaced before your function runs, so you never handle it yourself.

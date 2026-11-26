@@ -1,0 +1,36 @@
+---
+title: "Spawning"
+description: "Placing a loaded character in the world."
+---
+
+## `spawn:beforeSpawn` <Badge>before</Badge> [#spawn-beforespawn]
+
+`(src, character, point)` About to spawn. Changing `point` in place works only from inside
+bzn_core; from another resource, register a [spawn provider](/docs/spawn) instead.
+
+Return `false, '<reason>'` to hold the spawn back, e.g. while a character creator runs. The
+character stays loaded but is not placed, and the client gets `spawn:blocked`. Call
+`bzn.spawn.resume(src)` when the spawn may go ahead; the point is resolved again.
+
+```lua
+-- a character creator: no spawn before the character has a look
+bzn.hooks.on('spawn:beforeSpawn', function(src, character)
+    if not hasAppearance(character.id) then
+        TriggerClientEvent('mycreator:open', src)
+        return false, 'appearance_required'
+    end
+end)
+
+-- later, when the player is done
+bzn.spawn.resume(src)
+```
+
+## `spawn:spawned` [#spawn-spawned]
+
+`(src, character, point)` The client confirmed the spawn.
+
+```lua
+bzn.hooks.on('spawn:spawned', function(src, character, point)
+    TriggerClientEvent('myhud:show', src)
+end)
+```

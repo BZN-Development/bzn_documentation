@@ -1,0 +1,42 @@
+---
+title: "Status"
+description: "A status was set, ran out or recovered."
+---
+
+## `status:changed` [#status-changed]
+
+`(charId, name, value, reason)` A status was set or added to (eating, an admin). Not fired
+for the slow change over time.
+
+```lua
+-- stress above 80 gives a shaking screen
+bzn.hooks.on('status:changed', function(charId, name, value, reason)
+    if name ~= 'stress' then return end
+    local src = bzn.characters.getSource(charId)
+    if src then TriggerClientEvent('mystress:shake', src, value >= 80) end
+end)
+```
+
+## `status:empty` [#status-empty]
+
+`(charId, name)` A status reached 0.
+
+```lua
+bzn.hooks.on('status:empty', function(charId, name)
+    if name == 'thirst' then
+        local src = bzn.characters.getSource(charId)
+        TriggerClientEvent('ox_lib:notify', src, { description = 'You are very thirsty' })
+    end
+end)
+```
+
+## `status:recovered` [#status-recovered]
+
+`(charId, name)` A status left 0 again.
+
+```lua
+bzn.hooks.on('status:recovered', function(charId, name)
+    local src = bzn.characters.getSource(charId)
+    if src and name == 'hunger' then notify(src, 'You are no longer starving') end
+end)
+```

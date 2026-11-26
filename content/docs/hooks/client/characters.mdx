@@ -1,0 +1,59 @@
+---
+title: "Characters"
+description: "Selection, the local character loading and leaving, and its metadata."
+---
+
+## `character:selecting` [#character-selecting]
+
+The player is in character selection. A selection UI opens here.
+
+```lua
+bzn.hooks.on('character:selecting', function()
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openSelector' })
+end)
+```
+
+## `character:selectionChanged` [#character-selectionchanged]
+
+The list or the slots changed while in selection (the server sends a new list to a
+selector resource as well).
+
+```lua
+bzn.hooks.on('character:selectionChanged', function()
+    SendNUIMessage({ action = 'loading' })   -- the new list arrives from your server side
+end)
+```
+
+## `character:loaded` [#character-loaded]
+
+`(character)` The local player's character loaded. `bzn.character.get()` returns it from
+now on.
+
+```lua
+bzn.hooks.on('character:loaded', function(character)
+    SendNUIMessage({ action = 'show', name = character.firstName .. ' ' .. character.lastName })
+end)
+```
+
+## `character:unloaded` [#character-unloaded]
+
+`(reason)` The character left (`logout` or `shutdown`). Hide your UI.
+
+```lua
+bzn.hooks.on('character:unloaded', function(reason)
+    SendNUIMessage({ action = 'hide' })
+    SetNuiFocus(false, false)
+end)
+```
+
+## `character:metaChanged` [#character-metachanged]
+
+`(key, value)` A [metadata](/docs/characters/server#metadata) key the server shares with
+this client changed. Only keys marked as replicated arrive.
+
+```lua
+bzn.hooks.on('character:metaChanged', function(key, value)
+    if key == 'phone' then SendNUIMessage({ action = 'number', value = value }) end
+end)
+```

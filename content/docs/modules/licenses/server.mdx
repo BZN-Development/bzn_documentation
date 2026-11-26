@@ -1,0 +1,286 @@
+---
+title: "Server"
+---
+
+Every function works for characters that are not loaded too.
+
+## Reading [#reading]
+
+### has [#has]
+
+Whether the character has a licence that is valid right now: not expired, not suspended,
+not revoked.
+
+```lua
+bzn.licenses.has(charId, name)
+```
+
+- charId: `integer`
+- name: `string`
+
+**Returns**
+- `boolean`
+
+```lua
+-- a weapon shop
+if not bzn.licenses.has(character.id, 'weapon') then
+    return notify(src, 'You need a firearms permit')
+end
+```
+
+### get [#get]
+
+One licence, also when it is not valid.
+
+```lua
+bzn.licenses.get(charId, name)
+```
+
+**Returns**
+- license?: [`License`](/docs/types#license) nil = the character never had it
+
+```lua
+local license = bzn.licenses.get(charId, 'driver')
+if license and license.suspendedUntil then
+    print('suspended until ' .. os.date('%d-%m-%Y', license.suspendedUntil))
+end
+```
+
+### list [#list]
+
+Every licence of a character, expired ones too.
+
+```lua
+bzn.licenses.list(charId)
+```
+
+**Returns**
+- licenses: `table<string, License>` name -> licence
+
+```lua
+-- a police computer
+for name, license in pairs(bzn.licenses.list(charId)) do
+    local state = license.blockedUntil and 'revoked' or license.suspendedUntil and 'suspended'
+        or license.expired and 'expired' or 'valid'
+    print(name, state, license.points)
+end
+```
+
+### points [#points]
+
+The penalty points that count right now.
+
+```lua
+bzn.licenses.points(charId, name)
+```
+
+**Returns**
+- count: `integer` 0 when the character does not have the licence
+- points: `{ at, expires, reason?, by? }[]` oldest first; `at` and `expires` are unix times
+
+```lua
+local count, points = bzn.licenses.points(charId, 'driver')
+for _, point in ipairs(points) do
+    print(point.reason, os.date('%d-%m-%Y', point.expires))
+end
+```
+
+### definitions [#definitions]
+
+The licences that exist.
+
+```lua
+bzn.licenses.definitions()
+```
+
+**Returns**
+- definitions: `table<string, { label, days?, points? }>`
+
+```lua
+for name, def in pairs(bzn.licenses.definitions()) do
+    print(name, def.label, def.points and ('max ' .. def.points.max .. ' points') or 'no points')
+end
+```
+
+## Changing [#changing]
+
+### grant [#grant]
+
+Issues a licence. A licence the character already has is issued again: new dates, and its
+data is kept unless `opts.data` replaces it. Issuing a suspended licence again ends the
+suspension.
+
+```lua
+bzn.licenses.grant(charId, name, opts?)
+```
+
+- charId: `integer`
+- name: `string`
+- opts?: `table`
+  - days?: `integer` | `false` how long it is valid; default: the licence's own `days`; `false` = never runs out
+  - by?: `string` who issued it
+  - data?: `table` free data
+
+**Returns**
+- ok: `boolean`
+- err?: `'unknown_license'` | `'unknown_character'` | `'invalid_days'` | `'blocked'` | hook reason
+
+`'blocked'` means the licence was revoked for points and the waiting time is not over.
+
+```lua
+-- a driving school, after the test
+local ok, err = bzn.licenses.grant(character.id, 'driver', { by = 'Driving school' })
+if err == 'blocked' then
+    local license = bzn.licenses.get(character.id, 'driver')
+    notify(src, 'You cannot get a new licence before ' .. os.date('%d-%m-%Y %H:%M', license.blockedUntil))
+end
+```
+
+### revoke [#revoke]
+
+Takes a licence away for good.
+
+```lua
+bzn.licenses.revoke(charId, name, by?)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'`
+
+```lua
+bzn.licenses.revoke(charId, 'weapon', 'Court')
+```
+
+### setData [#setdata]
+
+Sets a value in a licence's free data (`nil` removes it).
+
+```lua
+bzn.licenses.setData(charId, name, key, value)
+```
+
+- key: `string` at most 64 characters. `points`, `suspendedUntil` and `blockedUntil` are
+  used by the module and refused.
+- value: anything JSON can hold
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'invalid_key'`
+
+```lua
+bzn.licenses.setData(charId, 'driver', 'category', 'B')
+```
+
+### register [#register]
+
+Adds a kind of licence while the server runs. For a resource with its own: a fishing
+licence, a taxi permit.
+
+```lua
+bzn.licenses.register(name, def)
+```
+
+- name: `string` lower-case letters, digits and `_`
+- def: `{ label, days?, points? }` as in the [config](/docs/modules/licenses#config)
+
+**Returns**
+- ok: `boolean`
+- err?: `string` what is wrong with the definition
+
+```lua
+bzn.onReady(function()
+    bzn.licenses.register('fishing', { label = 'Fishing licence', days = 14 })
+end)
+```
+
+## Penalty points [#penalty-points]
+
+### addPoints [#addpoints]
+
+Puts penalty points on a licence. When the character then has `max` points, the licence is
+[taken](/docs/modules/licenses#what-happens-at-max).
+
+```lua
+bzn.licenses.addPoints(charId, name, count?, opts?)
+```
+
+- charId: `integer`
+- name: `string`
+- count?: `integer` default 1
+- opts?: `{ reason?: string, by?: string }`
+
+**Returns**
+- ok: `boolean`
+- result: on success a table, on failure an error string
+  - points: `integer` how many the character has now
+  - max: `integer`
+  - outcome: `'points'` | `'suspended'` | `'revoked'`
+  - suspendedUntil?: `integer` unix time
+  - blockedUntil?: `integer` unix time
+- errors: `'unknown_license'` | `'no_points'` | `'not_found'` | `'invalid_count'` | hook reason
+
+`'no_points'` = the licence has no `points` in its definition. `'not_found'` = the character
+does not have the licence.
+
+```lua
+-- a speed camera
+local ok, result = bzn.licenses.addPoints(charId, 'driver', 1, { reason = 'Speeding', by = 'Speed camera' })
+if ok and result.outcome ~= 'points' then
+    print('licence taken')
+end
+```
+
+### removePoints [#removepoints]
+
+Takes points off, the oldest first.
+
+```lua
+bzn.licenses.removePoints(charId, name, count?)
+```
+
+- count?: `integer` default: all of them
+
+**Returns**
+- ok: `boolean`
+- left: `integer` how many are left; on failure `'not_found'` | `'invalid_count'`
+
+```lua
+-- a course that takes one point off
+local ok, left = bzn.licenses.removePoints(charId, 'driver', 1)
+if ok then print(left .. ' point(s) left') end
+```
+
+### unsuspend [#unsuspend]
+
+Ends a suspension now, or the waiting time after a revoke. After a revoke the licence still
+has to be issued again.
+
+```lua
+bzn.licenses.unsuspend(charId, name)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_suspended'`
+
+```lua
+-- a judge lifts the suspension
+bzn.licenses.unsuspend(charId, 'driver')
+```
+
+## Hooks [#hooks]
+
+```lua
+-- no firearms permit for anyone with a record
+bzn.hooks.on('licenses:beforeGrant', function(charId, name)
+    if name == 'weapon' and hasRecord(charId) then return false, 'has_record' end
+end)
+
+-- the police hear about every licence taken
+bzn.hooks.on('licenses:suspended', function(charId, name, untilTime)
+    alertPolice(charId, name)
+end)
+```
+
+All of them: [Server hooks](/docs/hooks/server/licenses).

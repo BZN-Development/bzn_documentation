@@ -1,0 +1,123 @@
+---
+title: "Getting started"
+---
+
+## 1. Install the resources [#_1-install-the-resources]
+
+Put these in your `resources` folder:
+
+| Resource | Where to get it |
+| --- | --- |
+| `oxmysql` | overextended/oxmysql |
+| `ox_lib` | overextended/ox_lib |
+| `ox_inventory` | overextended/ox_inventory |
+| `bzn_core` | this repository |
+| `bzn_config` | copy `bzn_core/templates/bzn_config` and rename it |
+
+`bzn_config` is yours. It holds only the settings you change, so updating `bzn_core` never
+touches it. See [Configuration](/docs/config).
+
+## 2. Database [#_2-database]
+
+bzn uses the oxmysql connection string as usual:
+
+```ini
+set mysql_connection_string "mysql://user:password@localhost/database?charset=utf8mb4"
+```
+
+You do not create any tables yourself. On start, core and every module migrate their own
+tables (all prefixed `bzn_`). The version each one reached is kept in `bzn_meta`.
+
+## 3. Start order [#_3-start-order]
+
+Order matters: dependencies first, then the config, then core, then anything that uses core.
+
+```ini
+ensure oxmysql
+ensure ox_lib
+
+ensure bzn_config
+ensure bzn_core
+
+ensure ox_inventory
+# your bzn_* resources and scripts after this
+```
+
+Do not start `spawnmanager`, `mapmanager` or `basic-gamemode`: bzn_core handles spawning.
+
+## 4. Permissions [#_4-permissions]
+
+bzn gives players ACE principals for their groups and staff roles, so core must be allowed
+to add and remove principals:
+
+```ini
+add_ace resource.bzn_core command.add_principal allow
+add_ace resource.bzn_core command.remove_principal allow
+```
+
+Without these lines core still starts, but logs a warning and players get no group or
+role principals.
+
+Staff commands (`bzn ...`) are protected by bzn's own [staff roles](/docs/roles), not by an
+ACE. The `admin` role also puts its users in `group.admin`, which txAdmin, ox_lib and most
+scripts understand:
+
+```ini
+add_ace group.admin command allow
+```
+
+### Server settings bzn relies on [#server-settings-bzn-relies-on]
+
+```ini
+setr sv_stateBagStrictMode true
+set sv_protectServerEntities true
+```
+
+| Setting | Why |
+| --- | --- |
+| `sv_stateBagStrictMode` | clients cannot change state bags: locks, fuel and mileage are decided by the server |
+| `sv_protectServerEntities` | clients cannot delete or take over what the server spawned, such as owned vehicles |
+
+Core warns at startup when one is off. With `core.strictBoot = true` it refuses to start
+instead ([Configuration](/docs/config#core)).
+
+## 5. Inventory bridge [#_5-inventory-bridge]
+
+ox_inventory loads framework bridges from its own folder:
+
+1. Copy `bzn_core/bridges/ox_inventory/` to `ox_inventory/modules/bridge/bzn/`.
+2. Set `setr inventory:framework "bzn"`.
+3. Copy it again after every ox_inventory update.
+
+Core warns at startup if the copy is missing or older than the one in bzn_core. More in
+[Inventory](/docs/inventory).
+
+## 6. First admin [#_6-first-admin]
+
+Join the server, then in the server console:
+
+```
+bzn role set <your server id> dev
+```
+
+Roles are stored on your user (your Rockstar license), so you keep it on every character.
+See [Staff roles](/docs/roles).
+
+## 7. Check it works [#_7-check-it-works]
+
+The server console should show something like:
+
+```
+[bzn:modules] started 6 module(s): groups, accounts, payroll, status, licenses, vehicles
+[bzn:core] bzn_core 0.1.0 ready
+```
+
+`bzn modules` lists every module and whether it started. With no character selection
+resource installed, core picks your most recent character, or makes a placeholder one
+(config `characters.devCharacter`), so you can play right away.
+
+## Development [#development]
+
+- `setr bzn:debug 1` turns on debug logging and some debug-only commands (such as
+  `bzn payroll tick`).
+- Every config option can be read with `bzn config <section>`.

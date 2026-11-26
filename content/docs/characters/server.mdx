@@ -1,0 +1,485 @@
+---
+title: "Server"
+---
+
+## Characters [#characters]
+
+### get [#get]
+
+The loaded character of a player.
+
+```lua
+bzn.characters.get(src)
+```
+
+- src: `integer`
+
+**Returns**
+- character?: [`Character`](/docs/types#character) nil while the player is in selection
+
+```lua
+local character = bzn.characters.get(source)
+if not character then return end
+```
+
+### getSource [#getsource]
+
+The server id of a loaded character.
+
+```lua
+bzn.characters.getSource(charId)
+```
+
+- charId: `integer`
+
+**Returns**
+- src?: `integer` nil if the character is not loaded
+
+```lua
+local src = bzn.characters.getSource(charId)
+if src then
+    TriggerClientEvent('ox_lib:notify', src, { description = 'Your car is ready' })
+end
+```
+
+### list [#list]
+
+The characters of a player's user, most recently played first. For a selector UI.
+
+```lua
+bzn.characters.list(src)
+```
+
+- src: `integer`
+
+**Returns**
+- characters?: [`Character[]`](/docs/types#character)
+
+```lua
+for _, character in ipairs(bzn.characters.list(src) or {}) do
+    print(character.id, character.firstName, character.lastName)
+end
+```
+
+### selection [#selection]
+
+Everything a selector UI shows: the characters with previews, the slots and the deletion
+mode.
+
+```lua
+bzn.characters.selection(src)
+```
+
+- src: `integer`
+
+**Returns**
+- selection?: [`Selection`](/docs/types#selection)
+
+```lua
+-- a selector resource sends it to its UI
+bzn.hooks.on('character:selecting', function(src)
+    local selection = bzn.characters.selection(src)
+    TriggerClientEvent('myselector:open', src, selection)
+end)
+```
+
+### create [#create]
+
+Creates a character for a player's user. Only while the player is in selection. Core
+validates everything (see [Identity and CPR](/docs/characters#identity-and-cpr)) and gives the
+character its CPR number.
+
+```lua
+bzn.characters.create(src, data)
+```
+
+- src: `integer`
+- data: `table`
+  - firstName: `string`
+  - lastName: `string`
+  - birthdate: `string` `'YYYY-MM-DD'`
+  - sex: `'m'` | `'f'`
+  - height?: `integer` centimetres
+  - nationality?: `string` one of the configured list
+
+**Returns**
+- ok: `boolean`
+- idOrErr: `integer` the new character id, or `'not_found'` | `'wrong_state'` | `'limit_reached'` | `'name_taken'` | `'name_blacklisted'` | `'cpr_exhausted'` | `'invalid_first_name'` | `'invalid_last_name'` | `'invalid_birthdate'` | `'invalid_sex'` | `'invalid_height'` | `'invalid_nationality'` | `'failed'` | hook reason
+
+```lua
+local ok, id = bzn.characters.create(src, {
+    firstName = 'Ada', lastName = 'Larsen', birthdate = '1994-03-02', sex = 'f', height = 172,
+})
+```
+
+### delete [#delete]
+
+Deletes, or asks to delete, one of a player's characters (config `characters.deletion`).
+Only while the player is in selection.
+
+```lua
+bzn.characters.delete(src, charId)
+```
+
+- src: `integer`
+- charId: `integer`
+
+**Returns**
+- ok: `boolean`
+- result: `'requested'` | `'deleted'` when ok, otherwise `'disabled'` | `'not_found'` | `'wrong_state'` | `'already_requested'` | hook reason
+
+```lua
+RegisterNetEvent('myselector:delete', function(charId)
+    local ok, result = bzn.characters.delete(source, charId)
+    if ok and result == 'requested' then
+        notify(source, 'Staff will look at your request')
+    elseif not ok then
+        notify(source, 'Could not delete: ' .. result)
+    end
+end)
+```
+
+### cancelDelete [#canceldelete]
+
+Takes back a deletion request. Only while the player is in selection.
+
+```lua
+bzn.characters.cancelDelete(src, charId)
+```
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'wrong_state'` | `'not_requested'`
+
+```lua
+RegisterNetEvent('myselector:keep', function(charId)
+    bzn.characters.cancelDelete(source, charId)
+end)
+```
+
+### select [#select]
+
+Loads one of a player's characters.
+
+```lua
+bzn.characters.select(src, charId)
+```
+
+- src: `integer`
+- charId: `integer`
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'wrong_state'` | `'already_loaded'` | `'frozen'` | `'delete_requested'` | hook reason
+
+```lua
+RegisterNetEvent('myselector:play', function(charId)
+    local ok, err = bzn.characters.select(source, charId)
+end)
+```
+
+### logout [#logout]
+
+Sends a player back to character selection, saving everything first.
+
+```lua
+bzn.characters.logout(src)
+```
+
+- src: `integer`
+
+**Returns**
+- ok: `boolean`
+- err?: `'not_found'` | `'not_loaded'` | `'cooldown'`
+
+```lua
+RegisterCommand('switch', function(src)
+    local ok, err = bzn.characters.logout(src)
+    if err == 'cooldown' then
+        TriggerClientEvent('ox_lib:notify', src, { description = 'Wait a moment' })
+    end
+end)
+```
+
+### registerPreview [#registerpreview]
+
+Adds a field to `preview` on every character in [`selection`](#selection). `fn` gets every
+character id of the list at once and returns `charId -> value`.
+
+```lua
+bzn.characters.registerPreview(key, fn)
+```
+
+- key: `string`
+- fn: `fun(charIds: integer[]): table<integer, any>`
+
+One call for the whole list, so a selector with eight characters costs one query, not
+eight.
+
+```lua
+-- show each character's bank balance in the selector
+bzn.onReady(function()
+    bzn.characters.registerPreview('bank', function(charIds)
+        local out = {}
+        for _, charId in ipairs(charIds) do
+            local account = bzn.accounts.getPersonal(charId)
+            out[charId] = account and account.balance or 0
+        end
+        return out
+    end)
+end)
+```
+
+## Metadata [#metadata]
+
+A place for any resource to keep its own small values on a character, without a table of
+its own: a phone number, a fingerprint, a tutorial flag, a counter. One value per key.
+
+- Works for characters that are **not online** too.
+- For a loaded character the values are in memory. A change is written with the
+  [save system](/docs/database#the-save-system) and always on logout.
+- **The client sees nothing by default.** Only keys you mark as replicated are sent, and
+  only to the character's own client.
+- Use it for small things that are read often. Data with its own rules (money, items,
+  vehicles, licences) belongs in its module.
+
+### setMeta [#setmeta]
+
+Sets a value (`nil` removes it).
+
+```lua
+bzn.characters.setMeta(charId, key, value)
+```
+
+- charId: `integer`
+- key: `string` letters, digits and `_ . : -`; at most 64 characters. Start it with your
+  resource's name (`myphone:number`) so two resources never use the same key.
+- value: anything JSON can hold, at most 16 KB encoded
+
+**Returns**
+- ok: `boolean`
+- err?: `'invalid_key'` | `'invalid_value'` | `'unknown_character'`
+
+```lua
+-- give every new character a phone number, once
+bzn.hooks.on('character:starter', function(src, character)
+    bzn.characters.setMeta(character.id, 'myphone:number', generateNumber())
+end)
+```
+
+### getMeta [#getmeta]
+
+```lua
+bzn.characters.getMeta(charId, key)
+```
+
+**Returns**
+- value: `any` nil when it is not set
+
+```lua
+local number = bzn.characters.getMeta(character.id, 'myphone:number')
+```
+
+<Callout type="warn" title="A table is the stored one">
+
+`getMeta` returns the table that is stored. Change it and call `setMeta` again, or the
+change is never saved:
+
+```lua
+local stats = bzn.characters.getMeta(charId, 'mygym:stats') or { strength = 0 }
+stats.strength = stats.strength + 1
+bzn.characters.setMeta(charId, 'mygym:stats', stats)
+```
+
+</Callout>
+
+### getAllMeta [#getallmeta]
+
+Every value of a character.
+
+```lua
+bzn.characters.getAllMeta(charId)
+```
+
+**Returns**
+- values: `table<string, any>` key -> value
+
+```lua
+for key, value in pairs(bzn.characters.getAllMeta(charId)) do
+    print(key, json.encode(value))
+end
+```
+
+### replicateMeta [#replicatemeta]
+
+Marks a key as sent to the character's own client: at load, and whenever it changes. Never
+replicate anything the player must not be able to read.
+
+```lua
+bzn.characters.replicateMeta(key)
+```
+
+**Returns**
+- ok: `boolean` false for an invalid key
+
+```lua
+-- server
+bzn.onReady(function()
+    bzn.characters.replicateMeta('myphone:number')
+end)
+
+-- client
+local number = bzn.character.getMeta('myphone:number')
+```
+
+The same without code, in `bzn_config/server/metadata.lua`:
+
+```lua
+return { replicated = { 'myphone:number' } }
+```
+
+Hook: [`character:metaChanged`](/docs/hooks/server/characters#character-metachanged).
+
+## Staff [#staff]
+
+These work online or offline. `by` is who did it, for the record.
+
+| Function | Returns | |
+| --- | --- | --- |
+| `bzn.characters.find(charId)` | `Character?, deletedAt?` | any character, deleted ones included |
+| `bzn.characters.listForUser(userId)` | `{ character, deletedAt }[]` | every character of a user |
+| `bzn.characters.freeze(charId, reason, by)` | `ok, err?` | `'not_found'` \| `'invalid_reason'` |
+| `bzn.characters.unfreeze(charId, by)` | `ok, err?` | `'not_frozen'` |
+| `bzn.characters.deletionRequests()` | `{ character, userName }[]` | oldest first |
+| `bzn.characters.approveDelete(charId, by)` | `ok, err?` | `'not_requested'` \| `'loaded'` \| hook reason |
+| `bzn.characters.denyDelete(charId, by, reason?)` | `ok, err?` | `'not_requested'` |
+| `bzn.characters.restore(charId, by)` | `ok, err?` | `'not_deleted'` |
+
+## Slots [#slots]
+
+| Function | Returns | |
+| --- | --- | --- |
+| `bzn.slots.get(userId)` | [`Slots`](/docs/types#slots) | |
+| `bzn.slots.add(userId, amount, opts?)` | `ok, Slots \| err` | `'invalid_amount'` \| `'over_max'` \| `'not_found'` |
+| `bzn.slots.remove(userId, amount, opts?)` | `ok, Slots \| err` | never below the base; `'no_extra_slots'` |
+| `bzn.slots.history(userId)` | `{ amount, source, note, granted_by, granted_at }[]` | newest first |
+
+`opts` = `{ source?, note?, by? }`.
+
+```lua
+-- e.g. a store webhook
+local ok, slots = bzn.slots.add(userId, 1, { source = 'tebex', note = 'order 1234', by = 'store' })
+```
+
+## Identity [#identity]
+
+### identity.validateCpr [#identity-validatecpr]
+
+```lua
+bzn.identity.validateCpr(cpr)
+```
+
+**Returns**
+- ok: `boolean`
+- sex?: `'m'` | `'f'`
+- birthdate?: `string` `'YYYY-MM-DD'`
+
+Checks a Danish-style CPR number (`DDMMYY-XXXX`) and reads what it says.
+
+```lua
+local ok, sex, birthdate = bzn.identity.validateCpr('010190-1234')
+if ok then print(sex, birthdate) end   -- 'f'  '1990-01-01'
+```
+
+## Selection [#selection-1]
+
+### useSelector [#useselector]
+
+Your resource handles character selection from now on: core emits `character:selecting`
+and waits for you to call [`select`](#select). When your resource stops, selection becomes
+automatic again.
+
+```lua
+bzn.characters.useSelector()
+```
+
+```lua
+bzn.onReady(function()
+    bzn.characters.useSelector()
+end)
+
+bzn.hooks.on('character:selecting', function(src)
+    TriggerClientEvent('myselector:open', src, bzn.characters.list(src))
+end)
+```
+
+One resource handles selection at a time. If another one already did, it is remembered:
+when yours releases the role or stops, the previous selector gets it back. That is how a
+character creator or a test can borrow selection for a moment.
+
+### releaseSelector [#releaseselector]
+
+Hands selection back without stopping your resource: to the selector that had it before
+yours, or to core when there was none.
+
+```lua
+-- e.g. while your selector is under maintenance
+bzn.characters.releaseSelector()
+```
+
+### getSelector [#getselector]
+
+The resource that handles character selection right now.
+
+```lua
+bzn.characters.getSelector()
+```
+
+**Returns**
+- resource?: `string` nil when core chooses automatically
+
+```lua
+if bzn.characters.getSelector() ~= GetCurrentResourceName() then
+    print('another resource has taken over character selection')
+end
+```
+
+## Players [#players]
+
+### players.get [#players-get]
+
+A connected player.
+
+```lua
+bzn.players.get(src)
+```
+
+- src: `integer`
+
+**Returns**
+- player?: [`Player`](/docs/types#player)
+
+```lua
+local player = bzn.players.get(src)
+print(player.userId, player.name)
+```
+
+### players.getByUserId [#players-getbyuserid]
+
+The online player of a user.
+
+```lua
+bzn.players.getByUserId(userId)
+```
+
+- userId: `integer`
+
+**Returns**
+- player?: [`Player`](/docs/types#player)
+
+```lua
+local player = bzn.players.getByUserId(userId)
+if player then
+    DropPlayer(player.source, 'Banned')
+end
+```

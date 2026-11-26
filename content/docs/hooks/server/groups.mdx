@@ -1,0 +1,145 @@
+---
+title: "Groups"
+description: "Joining, leaving, grades, duty, and groups created or edited in game."
+---
+
+## `groups:beforeAdd` <Badge>before</Badge> [#groups-beforeadd]
+
+`(charId, name, grade)` Someone is about to join a group.
+
+```lua
+-- nobody joins the police without a clean record
+bzn.hooks.on('groups:beforeAdd', function(charId, name, grade)
+    if name == 'police' and hasRecord(charId) then return false, 'has_record' end
+end)
+```
+
+## `groups:added` [#groups-added]
+
+`(charId, name, grade, src)` A character joined a group. `src` is their server id, or `nil` when they are offline.
+
+```lua
+bzn.hooks.on('groups:added', function(charId, name, grade, src)
+    if name == 'police' and src then
+        exports.ox_inventory:AddItem(src, 'radio', 1)
+    end
+end)
+```
+
+## `groups:beforeSetGrade` <Badge>before</Badge> [#groups-beforesetgrade]
+
+`(charId, name, grade, old)` A character's grade in a group is about to change.
+
+```lua
+-- only one chief at a time
+bzn.hooks.on('groups:beforeSetGrade', function(charId, name, grade, old)
+    if name == 'police' and grade == 4 and chiefExists() then return false, 'chief_exists' end
+end)
+```
+
+## `groups:gradeChanged` [#groups-gradechanged]
+
+`(charId, name, grade, old, src)` A character was promoted or demoted.
+
+```lua
+bzn.hooks.on('groups:gradeChanged', function(charId, name, grade, old, src)
+    if src then
+        notify(src, grade > old and 'You were promoted' or 'You were demoted')
+    end
+end)
+```
+
+## `groups:beforeRemove` <Badge>before</Badge> [#groups-beforeremove]
+
+`(charId, name, grade)` A character is about to leave a group, or be removed from it.
+
+```lua
+-- nobody leaves the mechanics while they still have a company car out
+bzn.hooks.on('groups:beforeRemove', function(charId, name, grade)
+    if name == 'mechanic' and hasCompanyCarOut(charId) then return false, 'return_the_car' end
+end)
+```
+
+## `groups:removed` [#groups-removed]
+
+`(charId, name, grade, src)` A character left a group.
+
+```lua
+bzn.hooks.on('groups:removed', function(charId, name, grade, src)
+    takeBackUniform(charId, name)
+end)
+```
+
+## `groups:beforeDuty` <Badge>before</Badge> [#groups-beforeduty]
+
+`(charId, name, previous)` Going on duty in `name`, or off duty when `name` is `nil`.
+
+```lua
+bzn.hooks.on('groups:beforeDuty', function(charId, name)
+    if name == 'police' and not hasPoliceVehicleNearby(charId) then
+        return false, 'go_to_the_station'
+    end
+end)
+```
+
+## `groups:dutyChanged` [#groups-dutychanged]
+
+`(charId, name, previous, src)` `name` is `nil` when going off duty.
+
+```lua
+-- a dispatch board of who is on duty
+bzn.hooks.on('groups:dutyChanged', function(charId, name, previous, src)
+    if previous then onDuty[previous][charId] = nil end
+    if name then
+        onDuty[name] = onDuty[name] or {}
+        onDuty[name][charId] = true
+    end
+end)
+```
+
+## `groups:beforeCreate` <Badge>before</Badge> [#groups-beforecreate]
+
+`(name, def)` A group is about to be created in game.
+
+```lua
+-- names staff may not use for a new group
+bzn.hooks.on('groups:beforeCreate', function(name, def)
+    if name:find('admin') then return false, 'reserved_name' end
+end)
+```
+
+## `groups:created` [#groups-created]
+
+`(name)` A group was created in game.
+
+```lua
+bzn.hooks.on('groups:created', function(name)
+    createGroupStash(name)
+end)
+```
+
+## `groups:updated` [#groups-updated]
+
+`(name, field, loadedMembers)` A group was edited. `field`: `label`, `grade`, `grades`,
+`permissions` or `paidBy`. `loadedMembers` lists the online character ids affected.
+
+```lua
+-- a salary changed: tell the members who are online
+bzn.hooks.on('groups:updated', function(name, field, loadedMembers)
+    if field ~= 'grade' then return end
+    for _, charId in ipairs(loadedMembers) do
+        local src = bzn.characters.getSource(charId)
+        if src then notify(src, 'Your contract with ' .. name .. ' has changed') end
+    end
+end)
+```
+
+## `groups:deleted` [#groups-deleted]
+
+`(name)` A group was deleted.
+
+```lua
+bzn.hooks.on('groups:deleted', function(name)
+    removeGroupStash(name)
+end)
+```

@@ -1,0 +1,98 @@
+---
+title: "Status"
+---
+
+Hunger, thirst, stress, and any other value from 0 to 100 that changes over time.
+
+- **[Server](/docs/modules/status/server)**: read, set, add, rate modifiers.
+- **[Client](/docs/modules/status/client)**: values for a HUD, computed from the local clock.
+
+## Anchors, not ticks [#anchors-not-ticks]
+
+Nothing is updated on a timer. Each status is stored as an **anchor**: its value at one
+moment and how fast it changes per minute. The current value is computed from the clock
+when someone asks:
+
+```
+value now = value at anchor + rate × minutes since anchor     (kept between 0 and 100)
+```
+
+Eating, a new rate (running, sick) or an admin setting it are events that write a new
+anchor and send it to that player. The client computes the same value from its own clock,
+so a HUD can read `bzn.status.get('hunger')` every frame and moves smoothly, without the
+server sending anything in between.
+
+Time only counts while the character is loaded.
+
+## Config [#config]
+
+Shared (`bzn_config/shared/status.lua`):
+
+```lua
+return {
+    statuses = {
+        hunger = { label = 'Hunger', start = 100, perMinute = -100 / 120, damage = 5 },  -- empty in 2 hours
+        thirst = { label = 'Thirst', start = 100, perMinute = -100 / 120, damage = 8 },
+        stress = { label = 'Stress', start = 0,   perMinute = -0.5, damage = 0 },
+        -- your own:
+        drunk  = { label = 'Drunk',  start = 0,   perMinute = -2.0, damage = 0 },
+    },
+}
+```
+
+| Option | |
+| --- | --- |
+| `start` | value of a new character |
+| `perMinute` | change per minute while loaded; negative goes down (`-1` = 100 to 0 in 100 minutes) |
+| `damage` | health lost per minute while the status is at 0 |
+
+### Damage at 0 [#damage-at-0]
+
+While a status with `damage` is at 0, the character loses health. **The server decides
+that**, not the client: a timer per character that only runs while something harmful is at
+0. Every 5 seconds it takes that slice of the damage (`damage = 6` is half a point every 5
+seconds; the fraction is carried, so nothing is rounded away). Several empty statuses add
+up.
+
+The timer stops by itself when the status leaves 0 (eating, an admin) and starts again when
+a character loads with an empty status. A player cannot switch the damage off on their own
+client.
+
+## Food and drink [#food-and-drink]
+
+The effect is written on the item, in ox_inventory's `data/items.lua`, in points:
+
+```lua
+['burger'] = {
+    label = 'Burger',
+    weight = 220,
+    server = { status = { hunger = 20 } },
+    client = { anim = 'eating', prop = 'burger', usetime = 2500 },
+},
+['coffee'] = {
+    label = 'Coffee',
+    server = { status = { thirst = 10, stress = -5 } },
+    client = { anim = { dict = 'mp_player_intdrink', clip = 'loop_bottle' }, usetime = 2500 },
+},
+```
+
+ox_inventory keeps `server` on the server only and tells bzn after it confirmed the use, so
+a client can neither see nor fake the amounts. ox_inventory's own `client.status` is not
+used.
+
+## Saving [#saving]
+
+Values are saved with the [save system](/docs/database#the-save-system): batched, spread
+over time, and always on logout. A crash loses at most one save interval.
+
+## Commands [#commands]
+
+```
+bzn status <target>                     every status with its rate
+bzn status <target> <name> <value>      set one
+bzn status me all 100                   feed and water yourself
+```
+
+## Hooks [#hooks]
+
+[Server hooks](/docs/hooks/server/status) · [Client hooks](/docs/hooks/client/status)

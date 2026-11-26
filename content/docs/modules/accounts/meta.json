@@ -1,0 +1,8 @@
+{
+  "title": "Accounts",
+  "pages": [
+    "index",
+    "server",
+    "client"
+  ]
+}
